@@ -129,12 +129,13 @@ while True:
                 msg = detection_msg_pb2.Detection()
                 # Align camera frame with standard motion capture frame
                 if SEND_OUTPUT:
+                    camera_point = [tvec[2], tvec[0], tvec[1]]
                     translation = [quad_pose.x(), quad_pose.y(), quad_pose.z()]
                     rotation = [quad_pose.roll(), quad_pose.pitch(), quad_pose.yaw()]
-                    tvec = transform_frame_EulerXYZ(rotation, translation, tvec) 
-                msg.x = tvec[2]
-                msg.y = tvec[0]
-                msg.z = tvec[1]
+                    tvec = transform_frame_EulerXYZ(rotation, translation, camera_point) 
+                msg.x = tvec[0]
+                msg.y = tvec[1]
+                msg.z = tvec[2]
                 msg.label = class_name
                 msg.confidence = 0
                 serial_msg = msg.SerializeToString()
