@@ -13,7 +13,6 @@ def transform_frame_EulerXYZ(euler_angles, translation, point, degrees=True):
     If degrees is set to true, the angles will be passed in as degrees
     '''
     
-    
     if degrees:
         alpha = euler_angles[0] * pi / 180
         beta = euler_angles[1] * pi / 180
