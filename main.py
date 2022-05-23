@@ -147,14 +147,9 @@ while True:
                     tvec = transform_frame_EulerXYZ(rotation, translation, camera_point) 
                 
                 msg = detection_msg_pb2.Detection()
-
-                # masked_frame = cv2.bitwise_and(frame, obj_mask)
-
-                crop_frame = frame[ymin:ymax, xmin:xmax, :]
-                crop_depth_frame = depth_frame[ymin:ymax, xmin:xmax]
-                cv2.rectangle(depth_colormap, (xmin, ymin), (xmax, ymax), (0,255,0))
-                cv2.imsave('depth.png', )
-                grasp.set_point_cloud_from_aligned_frames(crop_frame, crop_depth_frame, cam_intrinsics)
+                masked_frame = cv2.bitwise_and(frame, obj_mask)
+                cv2.imwrite('masked_frame.png', masked_frame)
+                grasp.set_point_cloud_from_aligned_frames_with_ROI(masked_frame, depth_frame, cam_intrinsics, obj_mask)
                 # grasp.set_point_cloud_from_aligned_frames(frame, depth_frame, cam_intrinsics)
                 grasp.save_pcd(f'pcd/pointcloud_{TARGET_OBJECT}_{utils.RECORD_COUNTER}.pcd')
 
