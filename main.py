@@ -149,7 +149,7 @@ while True:
                 
                 msg = detection_msg_pb2.Detection()
 
-
+                
                 # Create point cloud of detected object
                 masked_frame = cv2.bitwise_and(frame, obj_mask)
                 cv2.imwrite('masked_frame.png', masked_frame)
