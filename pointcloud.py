@@ -8,6 +8,7 @@ class GraspCandidate:
         self.pointcloud = o3d.cuda.pybind.geometry.PointCloud()
         if file is not None:
             self.pointcloud = o3d.io.read_point_cloud(file)
+        self.bbox = None
 
     def set_point_cloud_from_aligned_frames(self, frame, depth_frame, cam_intrinsics):
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -66,6 +67,10 @@ class GraspCandidate:
         vis = o3d.visualization.Visualizer()
         vis.create_window('PCD', width=1280, height=720)
         
+        # Add default coordinate frame
+        # mesh = o3d.geometry.TriangleMesh.create_coordinate_frame()
+        # vis.add_geometry(mesh)
+
         vis.add_geometry(pcd)
         while True:
             try:
@@ -74,6 +79,10 @@ class GraspCandidate:
             except KeyboardInterrupt:
                 vis.destroy_window()
                 del vis
+
+    def visualize_geometries(self, geometries):
+        # Pass in a list of geometries to visualize
+        pass
 
     def find_centroid(self, add_to_pcd=False):
         mean, cov = self.pointcloud.compute_mean_and_covariance()
@@ -89,10 +98,44 @@ class GraspCandidate:
             self.pointcloud.colors = o3d.utility.Vector3dVector(new_colors)
         
         return mean
-        
 
-    def find_largest_axis(self):
-        pass
+    def find_largest_axis(self, add_to_pcd=False):
+        bbox = o3d.geometry.OrientedBoundingBox.create_from_points(self.pointcloud.points, robust=True)
+        box_points = np.asarray(bbox.get_box_points())
+        center = bbox.center
+        extents = bbox.extent
+
+        T = np.eye(4, 4)
+        T[:3, :3] = bbox.R
+        T[:3, 3] = center
+        
+        # Get index of maximum in array to determine longest axis and create a unit vector in the direction of the longest axis
+        max_idx = np.argmax(extents)
+        unit_vec = np.zeros(3)
+        unit_vec[max_idx] = 1
+        
+        # Now, apply the transformation to transform the vector to the bounding box rotation
+        # This gives the vector that defines the direction of the axis of the object
+        axis = np.dot(bbox.R, unit_vec)
+            
+        if add_to_pcd: 
+            # Add to pointcloud for visualisation
+            points = np.asarray(self.pointcloud.points)
+            colors = np.asarray(self.pointcloud.colors)
+
+            axis_points = [np.add(center, np.dot(axis, 0.1*k)) for k in range(8)]
+            print(axis_points)
+            
+            new_points = np.concatenate((points, axis_points), axis=0)
+            new_colors = np.concatenate((colors, [[255, 0, 0] for _ in range(len(axis_points))]), axis=0)
+
+            new_points = np.concatenate((new_points, box_points), axis=0)
+            new_colors = np.concatenate((new_colors, [[255, 0, 0] for _ in range(len(box_points))]), axis=0)
+
+            self.pointcloud.points = o3d.utility.Vector3dVector(new_points)
+            self.pointcloud.colors = o3d.utility.Vector3dVector(new_colors)
+
+        return axis
 
     def find_opposing_point(self):
         pass
@@ -104,7 +147,7 @@ class GraspCandidate:
 if __name__=='__main__':
     grasp = GraspCandidate('pcd/pointcloud_bottle_36.pcd')
     # grasp.visualise_pcd('pcd/pointcloud_bottle_36.pcd')
-    grasp.find_centroid()
+    grasp.find_largest_axis(True)
     grasp.visualise_pcd()
 
         
