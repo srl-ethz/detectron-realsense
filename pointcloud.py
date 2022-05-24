@@ -21,7 +21,7 @@ class GraspCandidate:
         self.pointcloud.points = pcd.points
         self.pointcloud.colors = pcd.colors
 
-    def set_point_cloud_from_aligned_frames_with_ROI(self, frame, depth_frame, cam_intrinsics, mask):
+    def set_point_cloud_from_aligned_masked_frames(self, frame, depth_frame, cam_intrinsics):
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         img_depth = o3d.geometry.Image(depth_frame)
         img_color = o3d.geometry.Image(frame)

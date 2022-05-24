@@ -143,13 +143,17 @@ while True:
                     # Align camera frame with standard motion capture frame
                     camera_point = [tvec[2], tvec[0], tvec[1]]
                     translation = [quad_pose.x(), quad_pose.y(), quad_pose.z()]
-                    rotation = [quad_pose.roll(), quad_pose.pitch(), quad_pose.yaw()]
+                    # Pitch of the Vicon system has a different orientation
+                    rotation = [quad_pose.roll(), -quad_pose.pitch(), quad_pose.yaw()]
                     tvec = transform_frame_EulerXYZ(rotation, translation, camera_point) 
                 
                 msg = detection_msg_pb2.Detection()
+
+
+                # Create point cloud of detected object
                 masked_frame = cv2.bitwise_and(frame, obj_mask)
                 cv2.imwrite('masked_frame.png', masked_frame)
-                grasp.set_point_cloud_from_aligned_frames_with_ROI(masked_frame, depth_frame, cam_intrinsics, obj_mask)
+                grasp.set_point_cloud_from_aligned_masked_frames(masked_frame, depth_frame, cam_intrinsics)
                 # grasp.set_point_cloud_from_aligned_frames(frame, depth_frame, cam_intrinsics)
                 grasp.save_pcd(f'pcd/pointcloud_{TARGET_OBJECT}_{utils.RECORD_COUNTER}.pcd')
 
