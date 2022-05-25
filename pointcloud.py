@@ -1,7 +1,7 @@
 import open3d as o3d
 import numpy as np
 import cv2
-import pyrealsense2 as rs2
+
 
 class GraspCandidate:
     def __init__(self, file=None):
@@ -101,6 +101,7 @@ class GraspCandidate:
 
     def find_largest_axis(self, add_to_pcd=False):
         bbox = o3d.geometry.OrientedBoundingBox.create_from_points(self.pointcloud.points, robust=True)
+        self.bbox = bbox
         box_points = np.asarray(bbox.get_box_points())
         center = bbox.center
         extents = bbox.extent
@@ -113,31 +114,79 @@ class GraspCandidate:
         max_idx = np.argmax(extents)
         unit_vec = np.zeros(3)
         unit_vec[max_idx] = 1
+
+
+        # These are the other unit vectors perpendicular to the one above
+        # We will use these to create our grasping plane
+        idx_1 = (max_idx + 1) % 3
+        idx_2 = (max_idx + 2) % 3
+        
+        unit_vec_plane_1 = np.zeros(3)
+        unit_vec_plane_2 = np.zeros(3)
+        unit_vec_plane_1[idx_1] = 1
+        unit_vec_plane_2[idx_2] = 1
         
         # Now, apply the transformation to transform the vector to the bounding box rotation
         # This gives the vector that defines the direction of the axis of the object
-        axis = np.dot(bbox.R, unit_vec)
+        main_axis = np.dot(bbox.R, unit_vec)
+        axis_plane_1 = np.dot(bbox.R, unit_vec_plane_1)
+        axis_plane_2 = np.dot(bbox.R, unit_vec_plane_2)
             
         if add_to_pcd: 
             # Add to pointcloud for visualisation
             points = np.asarray(self.pointcloud.points)
             colors = np.asarray(self.pointcloud.colors)
 
-            axis_points = [np.add(center, np.dot(axis, 0.1*k)) for k in range(8)]
-            print(axis_points)
+            # Add a few points visualising the main axis
+            axis_points = [np.add(center, np.dot(main_axis, 0.1*k)) for k in range(8)]
             
             new_points = np.concatenate((points, axis_points), axis=0)
             new_colors = np.concatenate((colors, [[255, 0, 0] for _ in range(len(axis_points))]), axis=0)
 
+            # Add corner points of box
             new_points = np.concatenate((new_points, box_points), axis=0)
             new_colors = np.concatenate((new_colors, [[255, 0, 0] for _ in range(len(box_points))]), axis=0)
 
             self.pointcloud.points = o3d.utility.Vector3dVector(new_points)
             self.pointcloud.colors = o3d.utility.Vector3dVector(new_colors)
 
-        return axis
+        return main_axis, axis_plane_1, axis_plane_2
 
+
+    def find_all_grasping_candidates(self):
+        main_axis, axis_plane_1, axis_plane_2 = self.find_largest_axis()
+        max_idx = np.argmax(self.bbox.extent)
+        if max_idx == 0:
+            max_idx = 1
+        elif max_idx == 1:
+            max_idx = 0
+        
+
+        print(self.bbox.extent)
+        centroid = self.find_centroid()
+
+        points = np.asarray(self.pointcloud.points)
+        points = np.matmul(points, self.bbox.R)
+        colors = np.asarray(self.pointcloud.colors)
+        interest = abs(points[:, max_idx] - centroid[max_idx])
+        print(np.max(interest))
+        print(np.min(interest))
+        print(interest)
+        
+        rows = np.where(abs(points[:, max_idx] - centroid[max_idx]) < 0.0125)
+        print(rows)
+        colors[rows] = (255,0,0)
+        # self.pointcloud.points = o3d.utility.Vector3dVector(points[rows])
+        # self.pointcloud.colors = o3d.utility.Vector3dVector(colors[rows])
+
+        # self.pointcloud.points = o3d.utility.Vector3dVector(points[rows])
+        self.pointcloud.colors = o3d.utility.Vector3dVector(colors)
+        
+
+        pass
+    
     def find_opposing_point(self):
+        
         pass
 
     def find_grasping_points(self):
@@ -146,8 +195,7 @@ class GraspCandidate:
 
 if __name__=='__main__':
     grasp = GraspCandidate('pcd/pointcloud_bottle_36.pcd')
-    # grasp.visualise_pcd('pcd/pointcloud_bottle_36.pcd')
-    grasp.find_largest_axis(True)
+    grasp.find_all_grasping_candidates()
     grasp.visualise_pcd()
 
         
