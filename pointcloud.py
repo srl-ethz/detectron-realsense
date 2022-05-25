@@ -58,6 +58,16 @@ class GraspCandidate:
     def save_pcd(self, file):
         o3d.io.write_point_cloud(file, self.pointcloud)
 
+    def add_points_and_color_to_pcd(self, points, color):
+        curr_points = np.asarray(self.pointcloud.points)
+        curr_colors = np.asarray(self.pointcloud.colors)
+
+        new_points = np.concatenate((curr_points, points), axis=0)
+        new_colors = np.concatenate((curr_colors, [color for _ in range(len(points))]), axis=0)
+
+        self.pointcloud.points = new_points
+        self.pointcloud.colors = new_colors
+
     def visualise_pcd(self, file=None):
         if file is None:
             pcd = self.pointcloud
@@ -166,7 +176,7 @@ class GraspCandidate:
         centroid = self.find_centroid()
 
         points = np.asarray(self.pointcloud.points)
-        points = np.matmul(points, self.bbox.R)
+        rotated_points = np.matmul(points, self.bbox.R)
         colors = np.asarray(self.pointcloud.colors)
         interest = abs(points[:, max_idx] - centroid[max_idx])
         print(np.max(interest))
