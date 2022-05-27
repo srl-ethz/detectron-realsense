@@ -5,10 +5,11 @@ import cv2
 
 class GraspCandidate:
     def __init__(self, file=None):
-        self.pointcloud = o3d.cuda.pybind.geometry.PointCloud()
+        self.pointcloud = o3d.geometry.PointCloud()
         if file is not None:
             self.pointcloud = o3d.io.read_point_cloud(file)
         self.bbox = None
+        self.main_axis = None
 
     def set_point_cloud_from_aligned_frames(self, frame, depth_frame, cam_intrinsics):
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -65,8 +66,8 @@ class GraspCandidate:
         new_points = np.concatenate((curr_points, points), axis=0)
         new_colors = np.concatenate((curr_colors, [color for _ in range(len(points))]), axis=0)
 
-        self.pointcloud.points = new_points
-        self.pointcloud.colors = new_colors
+        self.pointcloud.points = o3d.utility.Vector3dVector(new_points)
+        self.pointcloud.colors = o3d.utility.Vector3dVector(new_colors)
 
     def visualise_pcd(self, file=None):
         if file is None:
@@ -91,34 +92,33 @@ class GraspCandidate:
                 del vis
 
     def visualize_geometries(self, geometries):
-        # Pass in a list of geometries to visualize
+        vis = o3d.visualization.Visualizer()
+        vis.create_window('PCD', width=1280, height=720)
+        
+        # Add default coordinate frame
+        # mesh = o3d.geometry.TriangleMesh.create_coordinate_frame()
+        # vis.add_geometry(mesh)
+        for g in geometries:
+            vis.add_geometry(g)
+        while True:
+            try:
+                vis.poll_events()
+                vis.update_renderer()
+            except KeyboardInterrupt:
+                vis.destroy_window()
+                del vis
         pass
 
     def find_centroid(self, add_to_pcd=False):
-        mean, cov = self.pointcloud.compute_mean_and_covariance()
-        
-        if add_to_pcd: 
-            # Add to pointcloud for visualisation
-            points = np.asarray(self.pointcloud.points)
-            colors = np.asarray(self.pointcloud.colors)
-            new_points = np.concatenate((points, [mean, ]), axis=0)
-            new_colors = np.concatenate((colors, [[255, 0, 0],]), axis=0)
-
-            self.pointcloud.points = o3d.utility.Vector3dVector(new_points)
-            self.pointcloud.colors = o3d.utility.Vector3dVector(new_colors)
-        
+        mean, _ = self.pointcloud.compute_mean_and_covariance()
         return mean
 
-    def find_largest_axis(self, add_to_pcd=False):
+    def find_largest_axis(self):
         bbox = o3d.geometry.OrientedBoundingBox.create_from_points(self.pointcloud.points, robust=True)
         self.bbox = bbox
         box_points = np.asarray(bbox.get_box_points())
         center = bbox.center
         extents = bbox.extent
-
-        T = np.eye(4, 4)
-        T[:3, :3] = bbox.R
-        T[:3, 3] = center
         
         # Get index of maximum in array to determine longest axis and create a unit vector in the direction of the longest axis
         max_idx = np.argmax(extents)
@@ -141,25 +141,10 @@ class GraspCandidate:
         main_axis = np.dot(bbox.R, unit_vec)
         axis_plane_1 = np.dot(bbox.R, unit_vec_plane_1)
         axis_plane_2 = np.dot(bbox.R, unit_vec_plane_2)
-            
-        if add_to_pcd: 
-            # Add to pointcloud for visualisation
-            points = np.asarray(self.pointcloud.points)
-            colors = np.asarray(self.pointcloud.colors)
 
-            # Add a few points visualising the main axis
-            axis_points = [np.add(center, np.dot(main_axis, 0.1*k)) for k in range(8)]
-            
-            new_points = np.concatenate((points, axis_points), axis=0)
-            new_colors = np.concatenate((colors, [[255, 0, 0] for _ in range(len(axis_points))]), axis=0)
-
-            # Add corner points of box
-            new_points = np.concatenate((new_points, box_points), axis=0)
-            new_colors = np.concatenate((new_colors, [[255, 0, 0] for _ in range(len(box_points))]), axis=0)
-
-            self.pointcloud.points = o3d.utility.Vector3dVector(new_points)
-            self.pointcloud.colors = o3d.utility.Vector3dVector(new_colors)
-
+        # Use for visualisation          
+        # axis_points = [np.add(center, np.dot(main_axis, 0.1*k)) for k in range(8)]
+        self.main_axis = main_axis
         return main_axis, axis_plane_1, axis_plane_2
 
 
@@ -171,41 +156,90 @@ class GraspCandidate:
         elif max_idx == 1:
             max_idx = 0
         
-
-        print(self.bbox.extent)
         centroid = self.find_centroid()
 
         points = np.asarray(self.pointcloud.points)
-        rotated_points = np.matmul(points, self.bbox.R)
         colors = np.asarray(self.pointcloud.colors)
-        interest = abs(points[:, max_idx] - centroid[max_idx])
-        print(np.max(interest))
-        print(np.min(interest))
-        print(interest)
         
         rows = np.where(abs(points[:, max_idx] - centroid[max_idx]) < 0.0125)
-        print(rows)
         colors[rows] = (255,0,0)
-        # self.pointcloud.points = o3d.utility.Vector3dVector(points[rows])
-        # self.pointcloud.colors = o3d.utility.Vector3dVector(colors[rows])
-
-        # self.pointcloud.points = o3d.utility.Vector3dVector(points[rows])
         self.pointcloud.colors = o3d.utility.Vector3dVector(colors)
-        
-
-        pass
+        return rows
     
-    def find_opposing_point(self):
-        
-        pass
+
 
     def find_grasping_points(self):
-        pass
+        rows = self.find_all_grasping_candidates()
+        points = np.asarray(self.pointcloud.points)
+        colors = np.asarray(self.pointcloud.colors)
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(points[rows])
+        pcd.colors = o3d.utility.Vector3dVector(colors[rows])
+        pcd.estimate_normals()
+        pcd.uniform_down_sample(2)
+        
+        points = np.asarray(pcd.points)
+        normals = np.asarray(pcd.normals)
+        curr = 0
+        last = len(points) - 1
+        weights = np.asarray([1, -1, 1])
+        best_partners = np.full((len(points), 3), -1.0)
+
+        while curr < last:
+            if best_partners[curr, 2] == 1:
+                curr += 1
+                continue
+        
+            point = points[curr]
+            normal = normals[curr]
+            max_score = 0
+            max_idx = curr
+            
+            curr += 1
+            for i in range(curr, last):
+                p = points[i]
+                n = normals[i]
+                # Points should have roughly the same  normal
+                k1 = weights[0] * abs(np.dot(normal, n))
+                k2 = weights[1] * abs(np.dot(normal, self.main_axis))
+                
+                d = np.subtract(point, p)
+                k3 = weights[2] * (abs(np.dot(d, normal)) + abs(np.dot(d, n)))
+                score = k1 + k2 + k3
+            
+                if score > max_score:
+                    print(f'updated score to {score}')
+                    max_score = score
+                    max_idx = i 
+                    best_partners[curr, 0] = max_idx
+                    best_partners[curr, 1] = score
+                    best_partners[curr, 2] = 1
+                    print(f'Recorded score: {best_partners[curr]}')
+
+            
+            best_partners[curr, 0] = max_idx
+            best_partners[curr, 1] = score
+            best_partners[curr, 2] = 1
+            best_partners[max_idx, 0] = curr
+            best_partners[max_idx, 1] = score
+            best_partners[max_idx, 2] = 1     
+
+                           
+
+            
+
+        max_idx = np.argmax(best_partners[:, 1])
+        print(best_partners[max_idx])
+        print(max_idx)
+
+
+        self.visualize_geometries([pcd,])
+
 
 
 if __name__=='__main__':
     grasp = GraspCandidate('pcd/pointcloud_bottle_36.pcd')
-    grasp.find_all_grasping_candidates()
-    grasp.visualise_pcd()
+    grasp.find_grasping_points()
+    # grasp.visualise_pcd()
 
         
