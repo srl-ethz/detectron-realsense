@@ -196,75 +196,51 @@ class GraspCandidate:
         normals = np.asarray(pcd.normals)
 
         curr = 0
-        last = len(points) - 1
+        last = len(points)
         print(last)
         # weights = np.asarray([2, -0.25, 2.5, -5, 5000, -100])
-        weights = np.asarray([0, 0, 0, 0, 1, 0])
+        weights = np.asarray([1, 1])
 
         best_partners = np.full((len(points), 3), -1.0)
         score = 0
 
-        while curr < last:
-            # if best_partners[curr, 2] == 1:
-            #     curr += 1
-            #     continue
-        
-            point = points[curr]
-            normal = normals[curr]
-            max_score = -32200
-            max_idx = curr
-            
-            curr += 1
-            for i in range(0, last+1):
-                if best_partners[curr, 2] == 1:
-                    continue
-                
-                p = points[i]
-                n = normals[i]
-                # Points should have an opposing normal, can't use signs because the estimation is quick to flip a normal
-                k1 = weights[0] * abs(np.dot(normal, n))
+        for i in range(0, last):
+            point = points[i]
+            normal = normals[i]
+            max_score = -32000
+            score = -32000
 
-                # If the point is not orthogonal to the main axis, we want to punish it
-                k2 = weights[1] * abs(np.dot(normal, self.main_axis))
-                
-                # The normals of the point should ideally align with the difference vector of the points
-                d = np.subtract(point, p)
-                print(f'{curr} and {i}')
-                print(np.linalg.norm(d))
-                
-                
-                k3 = weights[2] * (abs(np.dot(d, normal)) + abs(np.dot(d, n))) 
+            for j in range(0, last):
+                p = points[j]
+                n = normals[j]
 
-                # The difference vector should be normal to the main axis
-                k4 = weights[3] * abs(np.dot(d, self.main_axis))
-                
-                # Reward points that are far apart
-                k5 = weights[4] * np.linalg.norm(d)
-                
-                # Punish differences in the z component
-                k6 = weights[5] * abs(point[2] - p[2])
-                # Weighted sum is score
-                score = k1 + k2 + k3 + k4 + k5 + k6
+                distance = np.subtract(point, p)
+                k0 = weights[0] * np.linalg.norm(distance)
+
+                k1 = weights[1] * np.abs(point[2] - p[2])**2
+
+                score = k0 + k1
+                # print(f'{i} and {j}: {score}')
             
                 if score > max_score:
-                    # print(f'updated score to {score}')
+                    # print(f'updated max score for {i} to {score} with {j}') 
                     max_score = score
-                    max_idx = i 
-                    best_partners[curr, 0] = max_idx
-                    best_partners[curr, 1] = score
+                    max_idx = j
+                    best_partners[i, 0] = max_idx
+                    best_partners[i, 1] = score
             
             # Set indices to indicate the best pairing
-            best_partners[curr, 0] = max_idx
-            best_partners[max_idx, 0] = curr
+            best_partners[i, 0] = max_idx
+            best_partners[max_idx, 0] = i
             
             # Set score
-            best_partners[curr, 1] = score
+            best_partners[i, 1] = score
             best_partners[max_idx, 1] = score
             
             # Set mark to done so that we can save some computation time 
             # If a point is done, we won't consider possible pairings again
             # We can do this because our evaluation function is symmetrical
-            best_partners[curr, 2] = 1
+            best_partners[i, 2] = 1
             best_partners[max_idx, 2] = 1     
 
                            
@@ -273,7 +249,7 @@ class GraspCandidate:
         if np.size(best_partners) != 0:
             max_idx = np.argmax(best_partners[:, 1])
             max_idx_partner = int(best_partners[max_idx, 0])
-
+            print(f'{max_idx} and {max_idx_partner}')
             # Visualize with color
             colors[max_idx] = [0,255,0]
             colors[max_idx_partner] = [0,255,0]
