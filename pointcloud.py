@@ -195,7 +195,7 @@ class GraspCandidate:
 
         curr = 0
         last = len(points) - 1
-        weights = np.asarray([2, -0.25, 2.5, -5, 100])
+        weights = np.asarray([2, -0.25, 2.5, -5, 100, -100])
         best_partners = np.full((len(points), 3), -1.0)
 
         while curr < last:
@@ -228,6 +228,8 @@ class GraspCandidate:
                 # Reward points that are far apart
                 k5 = weights[4] * np.linalg.norm(d)
                 
+                # Punish differences in the z component
+                k6 = weights[5] * abs(point[2] - p[2])
                 # Weighted sum is score
                 score = k1 + k2 + k3 + k4 + k5
             
@@ -272,7 +274,7 @@ class GraspCandidate:
         grasp_pcd.points = o3d.utility.Vector3dVector(grasp_points)
         grasp_pcd.colors = o3d.utility.Vector3dVector(grasp_colors)
         
-        self.visualize_geometries([pcd, grasp_pcd])
+        self.visualize_geometries([self.pointcloud, grasp_pcd])
 
 
 
