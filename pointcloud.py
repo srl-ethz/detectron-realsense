@@ -11,6 +11,7 @@ class GraspCandidate:
             self.pointcloud = o3d.io.read_point_cloud(file)
         self.bbox = None
         self.main_axis = None
+        self.grasp_pcd = None
 
     def set_point_cloud_from_aligned_frames(self, frame, depth_frame, cam_intrinsics):
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -20,8 +21,8 @@ class GraspCandidate:
         rgbd = o3d.geometry.RGBDImage.create_from_color_and_depth(img_color, img_depth, convert_rgb_to_intensity=False)
         intrinsics = o3d.camera.PinholeCameraIntrinsic(cam_intrinsics.width, cam_intrinsics.height, cam_intrinsics.fx, cam_intrinsics.fy, cam_intrinsics.ppx, cam_intrinsics.ppy)
         pcd = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd, intrinsics)
-        # pcd.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
-        pcd.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
+        pcd.transform([[-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
+
         
         pcd = pcd.voxel_down_sample(0.03)
         self.pointcloud.points = pcd.points
@@ -35,8 +36,8 @@ class GraspCandidate:
         rgbd = o3d.geometry.RGBDImage.create_from_color_and_depth(img_color, img_depth, convert_rgb_to_intensity=False)
         intrinsics = o3d.camera.PinholeCameraIntrinsic(cam_intrinsics.width, cam_intrinsics.height, cam_intrinsics.fx, cam_intrinsics.fy, cam_intrinsics.ppx, cam_intrinsics.ppy)
         pcd = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd, intrinsics)
-        # pcd.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
-        pcd.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
+        pcd.transform([[-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
+
 
         
         # ROI selection
@@ -174,7 +175,8 @@ class GraspCandidate:
 
     def find_grasping_points(self):
         rows = self.find_all_grasping_candidates()
-        self.pointcloud.transform([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
+        # Transform into camera frame
+        # self.pointcloud.transform([[-1, 0, 0, 0], [0, 1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
 
         points = np.asarray(self.pointcloud.points)
         colors = np.asarray(self.pointcloud.colors)
@@ -195,21 +197,28 @@ class GraspCandidate:
 
         curr = 0
         last = len(points) - 1
-        weights = np.asarray([2, -0.25, 2.5, -5, 100, -100])
+        print(last)
+        # weights = np.asarray([2, -0.25, 2.5, -5, 5000, -100])
+        weights = np.asarray([0, 0, 0, 0, 1, 0])
+
         best_partners = np.full((len(points), 3), -1.0)
+        score = 0
 
         while curr < last:
-            if best_partners[curr, 2] == 1:
-                curr += 1
-                continue
+            # if best_partners[curr, 2] == 1:
+            #     curr += 1
+            #     continue
         
             point = points[curr]
             normal = normals[curr]
-            max_score = 0
+            max_score = -32200
             max_idx = curr
             
             curr += 1
-            for i in range(curr, last):
+            for i in range(0, last+1):
+                if best_partners[curr, 2] == 1:
+                    continue
+                
                 p = points[i]
                 n = normals[i]
                 # Points should have an opposing normal, can't use signs because the estimation is quick to flip a normal
@@ -220,6 +229,10 @@ class GraspCandidate:
                 
                 # The normals of the point should ideally align with the difference vector of the points
                 d = np.subtract(point, p)
+                print(f'{curr} and {i}')
+                print(np.linalg.norm(d))
+                
+                
                 k3 = weights[2] * (abs(np.dot(d, normal)) + abs(np.dot(d, n))) 
 
                 # The difference vector should be normal to the main axis
@@ -231,7 +244,7 @@ class GraspCandidate:
                 # Punish differences in the z component
                 k6 = weights[5] * abs(point[2] - p[2])
                 # Weighted sum is score
-                score = k1 + k2 + k3 + k4 + k5
+                score = k1 + k2 + k3 + k4 + k5 + k6
             
                 if score > max_score:
                     # print(f'updated score to {score}')
@@ -257,30 +270,36 @@ class GraspCandidate:
                            
             
         # Find best scoring point and its partner
-        max_idx = np.argmax(best_partners[:, 1])
-        max_idx_partner = int(best_partners[max_idx, 0])
+        if np.size(best_partners) != 0:
+            max_idx = np.argmax(best_partners[:, 1])
+            max_idx_partner = int(best_partners[max_idx, 0])
 
-        # Visualize with color
-        colors[max_idx] = [0,255,0]
-        colors[max_idx_partner] = [0,255,0]
-        pcd.colors = o3d.utility.Vector3dVector(colors)
-        pcd.points = o3d.utility.Vector3dVector(points)
+            # Visualize with color
+            colors[max_idx] = [0,255,0]
+            colors[max_idx_partner] = [0,255,0]
+            pcd.colors = o3d.utility.Vector3dVector(colors)
+            pcd.points = o3d.utility.Vector3dVector(points)
 
-        # New point cloud since visualization is flaky
-        grasp_points = [points[max_idx], points[max_idx_partner]]
-        print(grasp_points)
-        grasp_colors = [[0,255,0] for _ in range(len(grasp_points))]
-        grasp_pcd = o3d.geometry.PointCloud()
-        grasp_pcd.points = o3d.utility.Vector3dVector(grasp_points)
-        grasp_pcd.colors = o3d.utility.Vector3dVector(grasp_colors)
-        
-        self.visualize_geometries([self.pointcloud, grasp_pcd])
+            # New point cloud since visualization is flaky
+            grasp_points = [points[max_idx], points[max_idx_partner]]
+            print(grasp_points)
+            grasp_colors = [[0,255,0] for _ in range(len(grasp_points))]
+            grasp_pcd = o3d.geometry.PointCloud()
+            grasp_pcd.points = o3d.utility.Vector3dVector(grasp_points)
+            grasp_pcd.colors = o3d.utility.Vector3dVector(grasp_colors)
+            # self.grasp_pcd = grasp_pcd
+            self.grasp_pcd = pcd
+            return grasp_points
+        else:
+            return None
 
 
 
 if __name__=='__main__':
-    grasp = GraspCandidate('pcd/pointcloud_bottle_36.pcd')
+    grasp = GraspCandidate('pcd/pointcloud_bottle_65.pcd')
     grasp.find_grasping_points()
+    # grasp.visualize_geometries([grasp.pointcloud, grasp.grasp_pcd])
+    grasp.visualize_geometries([grasp.grasp_pcd,])
     # grasp.visualise_pcd()
 
         

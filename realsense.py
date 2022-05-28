@@ -72,5 +72,8 @@ class RSCamera:
     def deproject(self, intrinsics, x, y, depth):
         return rs.rs2_deproject_pixel_to_point(intrinsics, [x, y], depth)
 
+    def project(self, intrinsics, point):
+        return rs.rs2_project_point_to_pixel(intrinsics, point)
+
     def release(self):
         self.pipeline.stop()

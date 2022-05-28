@@ -40,6 +40,9 @@ output_depth = cv2.VideoWriter(utils.VIDEO_DEPTH_FILE, cv2.VideoWriter_fourcc(
 output_raw = cv2.VideoWriter(utils.VIDEO_RAW_FILE, cv2.VideoWriter_fourcc(
     'M', 'J', 'P', 'G'), 10, (cam.width, cam.height))
 
+output_grasp = cv2.VideoWriter(utils.VIDEO_GRASP_FILE, cv2.VideoWriter_fourcc(
+    'M', 'J', 'P', 'G'), 10, (cam.width, cam.height))
+
 logger = Logger()
 records = np.empty((0, logger.cols))
 
@@ -156,7 +159,18 @@ while True:
                 grasp.set_point_cloud_from_aligned_masked_frames(masked_frame, depth_frame, cam_intrinsics)
                 # grasp.set_point_cloud_from_aligned_frames(frame, depth_frame, cam_intrinsics)
                 grasp.save_pcd(f'pcd/pointcloud_{TARGET_OBJECT}_{utils.RECORD_COUNTER}.pcd')
-
+                grasp_points = grasp.find_grasping_points()
+                print(f'Grasp points: {grasp_points}')
+                print(f'Translation: {tvec}')
+                if grasp_points is not None:
+                    p1 = np.asanyarray(cam.project(cam_intrinsics, grasp_points[0]))
+                    p2 = np.asanyarray(cam.project(cam_intrinsics, grasp_points[1]))
+                    print(p1)
+                    print(type(p1))
+                    img = cv2.circle(frame, (int(p1[0]), int(p1[1])), 3, (0,255,0))
+                    img = cv2.circle(frame, (int(p2[0]), int(p2[1])), 3, (0,255,0))
+                    # cv2.imwrite(f'pictures/grasp_point_{TARGET_OBJECT}_{utils.RECORD_COUNTER}.png', img)
+                    output_grasp.write(img)
                 msg.x = tvec[0]
                 msg.y = tvec[1]
                 msg.z = tvec[2]
@@ -195,6 +209,7 @@ while True:
         output.release()
         output_depth.release()
         output_raw.release()
+        output_grasp.release()
         cam.release()
         cv2.destroyAllWindows()
         socket.close()
