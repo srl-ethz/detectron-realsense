@@ -1,6 +1,7 @@
 import open3d as o3d
 import numpy as np
 import cv2
+import time
 
 
 class GraspCandidate:
@@ -19,7 +20,8 @@ class GraspCandidate:
         rgbd = o3d.geometry.RGBDImage.create_from_color_and_depth(img_color, img_depth, convert_rgb_to_intensity=False)
         intrinsics = o3d.camera.PinholeCameraIntrinsic(cam_intrinsics.width, cam_intrinsics.height, cam_intrinsics.fx, cam_intrinsics.fy, cam_intrinsics.ppx, cam_intrinsics.ppy)
         pcd = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd, intrinsics)
-        pcd.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
+        # pcd.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
+        pcd.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
         
         pcd = pcd.voxel_down_sample(0.03)
         self.pointcloud.points = pcd.points
@@ -33,7 +35,9 @@ class GraspCandidate:
         rgbd = o3d.geometry.RGBDImage.create_from_color_and_depth(img_color, img_depth, convert_rgb_to_intensity=False)
         intrinsics = o3d.camera.PinholeCameraIntrinsic(cam_intrinsics.width, cam_intrinsics.height, cam_intrinsics.fx, cam_intrinsics.fy, cam_intrinsics.ppx, cam_intrinsics.ppy)
         pcd = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd, intrinsics)
-        pcd.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
+        # pcd.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
+        pcd.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
+
         
         # ROI selection
 
@@ -161,7 +165,7 @@ class GraspCandidate:
         points = np.asarray(self.pointcloud.points)
         colors = np.asarray(self.pointcloud.colors)
         
-        rows = np.where(abs(points[:, max_idx] - centroid[max_idx]) < 0.0125)
+        rows = np.where(abs(points[:, max_idx] - centroid[max_idx]) < 0.008)
         colors[rows] = (255,0,0)
         self.pointcloud.colors = o3d.utility.Vector3dVector(colors)
         return rows
@@ -170,19 +174,28 @@ class GraspCandidate:
 
     def find_grasping_points(self):
         rows = self.find_all_grasping_candidates()
+        self.pointcloud.transform([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
+
         points = np.asarray(self.pointcloud.points)
         colors = np.asarray(self.pointcloud.colors)
-        pcd = o3d.geometry.PointCloud()
-        pcd.points = o3d.utility.Vector3dVector(points[rows])
-        pcd.colors = o3d.utility.Vector3dVector(colors[rows])
-        pcd.estimate_normals()
-        pcd.uniform_down_sample(2)
+        points = points[rows]
+        colors = colors[rows]
         
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(points)
+        pcd.colors = o3d.utility.Vector3dVector(colors)
+        
+        pcd.estimate_normals()
+        pcd = pcd.uniform_down_sample(2)
+        
+
         points = np.asarray(pcd.points)
+        colors = np.asarray(pcd.colors)
         normals = np.asarray(pcd.normals)
+
         curr = 0
         last = len(points) - 1
-        weights = np.asarray([1, -1, 1])
+        weights = np.asarray([2, -0.25, 2.5, -5, 100])
         best_partners = np.full((len(points), 3), -1.0)
 
         while curr < last:
@@ -199,41 +212,67 @@ class GraspCandidate:
             for i in range(curr, last):
                 p = points[i]
                 n = normals[i]
-                # Points should have roughly the same  normal
+                # Points should have an opposing normal, can't use signs because the estimation is quick to flip a normal
                 k1 = weights[0] * abs(np.dot(normal, n))
+
+                # If the point is not orthogonal to the main axis, we want to punish it
                 k2 = weights[1] * abs(np.dot(normal, self.main_axis))
                 
+                # The normals of the point should ideally align with the difference vector of the points
                 d = np.subtract(point, p)
-                k3 = weights[2] * (abs(np.dot(d, normal)) + abs(np.dot(d, n)))
-                score = k1 + k2 + k3
+                k3 = weights[2] * (abs(np.dot(d, normal)) + abs(np.dot(d, n))) 
+
+                # The difference vector should be normal to the main axis
+                k4 = weights[3] * abs(np.dot(d, self.main_axis))
+                
+                # Reward points that are far apart
+                k5 = weights[4] * np.linalg.norm(d)
+                
+                # Weighted sum is score
+                score = k1 + k2 + k3 + k4 + k5
             
                 if score > max_score:
-                    print(f'updated score to {score}')
+                    # print(f'updated score to {score}')
                     max_score = score
                     max_idx = i 
                     best_partners[curr, 0] = max_idx
                     best_partners[curr, 1] = score
-                    best_partners[curr, 2] = 1
-                    print(f'Recorded score: {best_partners[curr]}')
-
             
+            # Set indices to indicate the best pairing
             best_partners[curr, 0] = max_idx
-            best_partners[curr, 1] = score
-            best_partners[curr, 2] = 1
             best_partners[max_idx, 0] = curr
+            
+            # Set score
+            best_partners[curr, 1] = score
             best_partners[max_idx, 1] = score
+            
+            # Set mark to done so that we can save some computation time 
+            # If a point is done, we won't consider possible pairings again
+            # We can do this because our evaluation function is symmetrical
+            best_partners[curr, 2] = 1
             best_partners[max_idx, 2] = 1     
 
                            
-
             
-
+        # Find best scoring point and its partner
         max_idx = np.argmax(best_partners[:, 1])
-        print(best_partners[max_idx])
-        print(max_idx)
+        max_idx_partner = int(best_partners[max_idx, 0])
 
+        # Visualize with color
+        colors[max_idx] = [0,255,0]
+        colors[max_idx_partner] = [0,255,0]
+        pcd.colors = o3d.utility.Vector3dVector(colors)
+        pcd.points = o3d.utility.Vector3dVector(points)
 
-        self.visualize_geometries([pcd,])
+        # New point cloud since visualization is flaky
+        grasp_points = [points[max_idx], points[max_idx_partner]]
+        print(grasp_points)
+        grasp_colors = [[0,255,0] for _ in range(len(grasp_points))]
+        grasp_pcd = o3d.geometry.PointCloud()
+        grasp_pcd.points = o3d.utility.Vector3dVector(grasp_points)
+        grasp_pcd.colors = o3d.utility.Vector3dVector(grasp_colors)
+        
+        self.visualize_geometries([pcd, grasp_pcd])
 
 
 
