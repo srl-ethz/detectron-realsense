@@ -134,6 +134,7 @@ while True:
             tvec = cam.deproject(cam_intrinsics, center_x, center_y, distance)
             # Realsense y-axis points down by default
             tvec[1] = -tvec[1]
+            yaw = 0
 
             mask_array_instance.append(mask_array[:, :, i:(i+1)])
             obj_mask = np.zeros_like(frame)
@@ -165,15 +166,20 @@ while True:
                 if grasp_points is not None:
                     p1 = np.asanyarray(cam.project(cam_intrinsics, grasp_points[0]))
                     p2 = np.asanyarray(cam.project(cam_intrinsics, grasp_points[1]))
-                    print(p1)
-                    print(type(p1))
                     img = cv2.circle(frame, (int(p1[0]), int(p1[1])), 3, (0,255,0))
                     img = cv2.circle(frame, (int(p2[0]), int(p2[1])), 3, (0,255,0))
-                    # cv2.imwrite(f'pictures/grasp_point_{TARGET_OBJECT}_{utils.RECORD_COUNTER}.png', img)
                     output_grasp.write(img)
+                    delta_x = np.abs(p1[0] - p2[0])
+                    delta_y = np.abs(p1[1] - p2[1])
+
+                    yaw = np.abs(np.arctan(delta_x/delta_y) * 180/np.pi - 90)
+                    
+                
+                print(yaw)
                 msg.x = tvec[0]
                 msg.y = tvec[1]
                 msg.z = tvec[2]
+                msg.yaw = yaw
                 msg.label = class_name
                 msg.confidence = 0
                 serial_msg = msg.SerializeToString()
