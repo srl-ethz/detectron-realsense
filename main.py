@@ -16,20 +16,23 @@ from detectron2.utils.visualizer import Visualizer
 from detectron2.data import MetadataCatalog
 
 from realsense import RSCamera
+import pyrealsense2 as rs
 import zmq
 import utils
 from logger import Logger
 from frame_transformations import transform_frame_EulerXYZ
 from pointcloud import GraspCandidate
 import detection_msg_pb2
+from streamer_receiver import VideoReceiver
 
 
 SHOW_WINDOW_VIS = True
 SEND_OUTPUT = False
 TARGET_OBJECT = 'bottle'
 
-cam = RSCamera()
+cam = utils.RSCameraMockup()
 grasp = GraspCandidate()
+receiver = VideoReceiver()
 
 output = cv2.VideoWriter(utils.VIDEO_FILE, cv2.VideoWriter_fourcc(
             'M', 'J', 'P', 'G'), 10, (cam.width, cam.height))
@@ -76,16 +79,18 @@ while True:
             quad_pose.ParseFromString(quad_pose_serial)
             print(quad_pose)
 
-        frame, depth_frame = cam.get_rs_color_aligned_frames()
-        cam_intrinsics = frame.profile.as_video_stream_profile().intrinsics
+        frame, depth_frame = receiver.recv_frames()
+        cam_intrinsics = cam.intrinsics
         
-        depth_colormap = cam.colorize_frame(depth_frame)
+        # depth_colormap = cam.colorize_frame(depth_frame)
 
-        frame = np.asarray(frame.get_data())
-        depth_frame = np.asanyarray(depth_frame.get_data())
+        # frame = np.asarray(frame.get_data())
+        # depth_frame = np.asanyarray(depth_frame.get_data())
 
-        output_depth.write(depth_colormap)
-        output_raw.write(frame)
+        # output_depth.write(depth_colormap)
+        # output_raw.write(frame)
+
+        frame, depth_frame = receiver.recv_frames()
 
         outputs = predictor(frame)
         detected_class_idxs = outputs['instances'].pred_classes
@@ -132,6 +137,7 @@ while True:
 
             # Get translation vector relative to the camera frame
             tvec = cam.deproject(cam_intrinsics, center_x, center_y, distance)
+            # print(f'{class_name} at {tvec}')
             # Realsense y-axis points down by default
             tvec[1] = -tvec[1]
             yaw = 0
@@ -169,13 +175,13 @@ while True:
                     img = cv2.circle(frame, (int(p1[0]), int(p1[1])), 3, (0,255,0))
                     img = cv2.circle(frame, (int(p2[0]), int(p2[1])), 3, (0,255,0))
                     output_grasp.write(img)
-                    delta_x = np.abs(p1[0] - p2[0])
+                    delta_x = p1[0] - p2[0]
                     delta_y = np.abs(p1[1] - p2[1])
 
                     yaw = np.abs(np.arctan(delta_x/delta_y) * 180/np.pi - 90)
                     
                 
-                print(yaw)
+                
                 msg.x = tvec[0]
                 msg.y = tvec[1]
                 msg.z = tvec[2]
@@ -217,6 +223,7 @@ while True:
         output_raw.release()
         output_grasp.release()
         cam.release()
+        receiver.image_hub.close()
         cv2.destroyAllWindows()
         socket.close()
         logger.export_to_csv(utils.LOG_FILE)

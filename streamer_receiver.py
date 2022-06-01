@@ -25,13 +25,14 @@ class VideoReceiver:
         color = cv2.imdecode(np.frombuffer(color_jpg_buffer, dtype='uint8'), -1)
         self.image_hub.send_reply(b'OK')
         
-        depth_header, depth_jpg_buffer = self.image_hub.recv_jpg()
-        depth = cv2.imdecode(np.frombuffer(depth_jpg_buffer, dtype='uint8'), -1)
+        depth_header, depth_buffer = self.image_hub.recv_jpg()
+        depth = cv2.imdecode(np.frombuffer(depth_buffer, dtype='uint8'), -1)
         self.image_hub.send_reply(b'OK')
 
-        cv2.imshow(color_header, color)
-        cv2.imshow(depth_header, depth)
-        cv2.waitKey(1)
+        # cv2.imshow(color_header, color)
+        # cv2.imshow(depth_header, depth)
+        # cv2.waitKey(1)
+        return color, depth
 
 
 if __name__=='__main__':
