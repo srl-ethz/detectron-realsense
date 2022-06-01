@@ -3,5 +3,5 @@
 *.jpg
 *.avi
 *.csv
-# *.pcd
+*.pcd
 counter
