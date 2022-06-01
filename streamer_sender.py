@@ -25,3 +25,12 @@ class VideoSender:
         self.sender_color.send_jpg(self.hostname, jpg_frame)
         self.sender_depth.send_jpg(self.hostname + '_depth', jpg_frame_depth)
         print('Sent frames')
+
+
+if __name__=='__main__':
+    sender = VideoSender('tcp://10.31.62.2:5555')
+    cam = RSCamera()
+    while True:
+        color, depth = cam.get_raw_color_aligned_frames()
+        sender.send_frames(color, depth)
+        print('sent frames')

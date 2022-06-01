@@ -4,6 +4,8 @@ import numpy as np
 import cv2
 import imagezmq
 
+from realsense import RSCamera
+
 # image_hub = imagezmq.ImageHub()
 # while True:  # show streamed images until Ctrl-C
 #     rpi_name, jpg_buffer = image_hub.recv_jpg()
@@ -30,3 +32,10 @@ class VideoReceiver:
         cv2.imshow(color_header, color)
         cv2.imshow(depth_header, depth)
         cv2.waitKey(1)
+
+
+if __name__=='__main__':
+    receiver = VideoReceiver()
+    while True:
+        receiver.recv_frames()
+        print('received frames')
