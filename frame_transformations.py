@@ -45,6 +45,8 @@ def transform_frame_EulerXYZ(euler_angles, translation, point, degrees=True):
     T = np.eye(4, 4)
     T[:3, :3] = R
     T[:3, 3] = translation
+
+    
     
     # Apply transformation on target point we want to transform into different coordinate system
     return np.dot(T, point)

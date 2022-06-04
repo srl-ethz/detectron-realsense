@@ -27,7 +27,7 @@ from streamer_receiver import VideoReceiver
 
 
 SHOW_WINDOW_VIS = True
-SEND_OUTPUT = False
+SEND_OUTPUT = True
 TARGET_OBJECT = 'bottle'
 
 cam = utils.RSCameraMockup()
@@ -63,7 +63,7 @@ context = zmq.Context()
 socket = context.socket(zmq.REP)
 
 if SEND_OUTPUT:
-    socket.connect('tcp://localhost:5555')
+    socket.connect('tcp://localhost:2222')
 
 starting_time = time.time()
 frame_counter = 0
@@ -150,35 +150,57 @@ while True:
             
             if class_name == TARGET_OBJECT:
                 if SEND_OUTPUT:
-                    # Align camera frame with standard motion capture frame
-                    camera_point = [tvec[2], tvec[0], tvec[1]]
-                    translation = [quad_pose.x(), quad_pose.y(), quad_pose.z()]
-                    # Pitch of the Vicon system has a different orientation
-                    rotation = [quad_pose.roll(), -quad_pose.pitch(), quad_pose.yaw()]
-                    tvec = transform_frame_EulerXYZ(rotation, translation, camera_point) 
-                
+                    print('Object location as detected -----')
+                    print(tvec)
+                    cam_2_drone_translation = [0.1267, 0, -0.0416]
+                    cam_2_drone_orientation = [0, -30, 0]
+
+                    translation = [
+                        quad_pose.x, quad_pose.y, quad_pose.z]
+                    rotation = [
+                        quad_pose.roll, -quad_pose.pitch, quad_pose.yaw]
+
+                    # print('Quad translation: -----')
+                    # print(translation)
+                    # print('Quad rotation: ----')
+                    # print(rotation)
+
+                    tvec = [tvec[2], tvec[0], tvec[1], 1]
+
+                    
+                    # Transform into drone frame
+                    tvec = transform_frame_EulerXYZ(cam_2_drone_orientation, cam_2_drone_translation, tvec, degrees=True)
+                    print(f"Transform to drone frame: {tvec}")
+                    # Transform into mocap frame
+                    tvec = transform_frame_EulerXYZ(
+                        rotation, translation, tvec, degrees=False)
+                    print(f'Transform to mocap frame: {tvec}')
+                    print(tvec)
+                    
+                    
+
                 msg = detection_msg_pb2.Detection()
 
                 
                 # Create point cloud of detected object
                 masked_frame = cv2.bitwise_and(frame, obj_mask)
                 cv2.imwrite('masked_frame.png', masked_frame)
-                grasp.set_point_cloud_from_aligned_masked_frames(masked_frame, depth_frame, cam_intrinsics)
-                # grasp.set_point_cloud_from_aligned_frames(frame, depth_frame, cam_intrinsics)
-                grasp.save_pcd(f'pcd/pointcloud_{TARGET_OBJECT}_{utils.RECORD_COUNTER}.pcd')
-                grasp_points = grasp.find_grasping_points()
-                print(f'Grasp points: {grasp_points}')
-                print(f'Translation: {tvec}')
-                if grasp_points is not None:
-                    p1 = np.asanyarray(cam.project(cam_intrinsics, grasp_points[0]))
-                    p2 = np.asanyarray(cam.project(cam_intrinsics, grasp_points[1]))
-                    img = cv2.circle(frame, (int(p1[0]), int(p1[1])), 3, (0,255,0))
-                    img = cv2.circle(frame, (int(p2[0]), int(p2[1])), 3, (0,255,0))
-                    output_grasp.write(img)
-                    delta_x = p1[0] - p2[0]
-                    delta_y = np.abs(p1[1] - p2[1])
+                # grasp.set_point_cloud_from_aligned_masked_frames(masked_frame, depth_frame, cam_intrinsics)
+                # # grasp.set_point_cloud_from_aligned_frames(frame, depth_frame, cam_intrinsics)
+                # grasp.save_pcd(f'pcd/pointcloud_{TARGET_OBJECT}_{utils.RECORD_COUNTER}.pcd')
+                # grasp_points = grasp.find_grasping_points()
+                # # print(f'Grasp points: {grasp_points}')
+                # # print(f'Translation: {tvec}')
+                # if grasp_points is not None:
+                #     p1 = np.asanyarray(cam.project(cam_intrinsics, grasp_points[0]))
+                #     p2 = np.asanyarray(cam.project(cam_intrinsics, grasp_points[1]))
+                #     img = cv2.circle(frame, (int(p1[0]), int(p1[1])), 3, (0,255,0))
+                #     img = cv2.circle(frame, (int(p2[0]), int(p2[1])), 3, (0,255,0))
+                #     output_grasp.write(img)
+                #     delta_x = p1[0] - p2[0]
+                #     delta_y = np.abs(p1[1] - p2[1])
 
-                    yaw = np.abs(np.arctan(delta_x/delta_y) * 180/np.pi - 90)
+                #     yaw = np.abs(np.arctan(delta_x/delta_y) * 180/np.pi - 90)
                     
                 
                 
