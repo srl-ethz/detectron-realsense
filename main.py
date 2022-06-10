@@ -142,6 +142,7 @@ while True:
 
             # Get translation vector relative to the camera frame
             tvec = cam.deproject(cam_intrinsics, center_x, center_y, distance)
+            easy_center = tvec
             # print(f'{class_name} at {tvec}')
             # Realsense y-axis points down by default
             tvec[1] = -tvec[1]
@@ -179,7 +180,7 @@ while True:
                     # Transform into mocap frame
                     tvec = transform_frame_EulerXYZ(
                         rotation, translation, tvec, degrees=False)
-                    # print(f'Transform to mocap frame: {tvec}')
+                    print(f'Transform to mocap frame: {tvec}')
                     # print(tvec)
                     
                     
@@ -201,6 +202,7 @@ while True:
                     # Get points in pixels (project back into image from 3D point)
                     p1 = np.asanyarray(cam.project(cam_intrinsics, grasp_points[0]))
                     p2 = np.asanyarray(cam.project(cam_intrinsics, grasp_points[1]))
+
                     img = cv2.circle(frame, (int(p1[0]), int(p1[1])), 3, (0,255,0))
                     img = cv2.circle(frame, (int(p2[0]), int(p2[1])), 3, (0,255,0))
                     output_grasp.write(img)
@@ -209,11 +211,12 @@ while True:
 
                     yaw = np.abs(np.arctan(delta_x/delta_y) * 180/np.pi - 90)
                 
-                tvec = [centroid[0], centroid[1], centroid[2]]
                 # May need to invert y axis
                 if SEND_OUTPUT and not SIMPLE_LOC:
+                    tvec = [-centroid[0], centroid[1], -centroid[2], 1]
                     print('Object Centroid (point cloud localization) -----')
                     print(tvec)
+                    print(f'Simple localization: {easy_center}')
                     cam_2_drone_translation = [0.1267, 0, -0.0416]
                     cam_2_drone_orientation = [0, -30, 0]
 
@@ -228,6 +231,7 @@ while True:
                     # print(rotation)
 
                     tvec = [tvec[2], tvec[0], tvec[1], 1]
+                    print(f'Mocap axis tvec: {tvec}')
 
                     
                     # Transform into drone frame
@@ -237,7 +241,7 @@ while True:
                     tvec = transform_frame_EulerXYZ(
                         rotation, translation, tvec, degrees=False)
                     print(f'Transform to mocap frame: {tvec}')
-                    print(tvec)
+               
                     
                 
                 

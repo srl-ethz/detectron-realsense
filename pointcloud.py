@@ -119,7 +119,11 @@ class GraspCandidate:
         return mean
 
     def find_largest_axis(self):
-        bbox = o3d.geometry.OrientedBoundingBox.create_from_points(self.pointcloud.points, robust=True)
+        try:
+            bbox = o3d.geometry.OrientedBoundingBox.create_from_points(self.pointcloud.points, robust=True)
+        except Exception:
+            print('Something went wrong trying to find the bounding box')
+            return None
         self.bbox = bbox
         box_points = np.asarray(bbox.get_box_points())
         center = bbox.center
@@ -272,10 +276,13 @@ class GraspCandidate:
 
 
 if __name__=='__main__':
-    grasp = GraspCandidate('pcd/pointcloud_bottle_65.pcd')
-    grasp.find_grasping_points()
+    grasp = GraspCandidate('pcd/pointcloud_bottle_90.pcd')
+    # grasp.find_grasping_points()
+    cen = grasp.find_centroid()
+    grasp.add_points_and_color_to_pcd([cen,], (255, 0,0))
+    grasp.visualise_pcd()
     # grasp.visualize_geometries([grasp.pointcloud, grasp.grasp_pcd])
-    grasp.visualize_geometries([grasp.grasp_pcd,])
+    # grasp.visualize_geometries([grasp.pointcloud, grasp.grasp_pcd,])
     # grasp.visualise_pcd()
 
         
