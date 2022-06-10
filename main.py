@@ -14,6 +14,7 @@ from detectron2.config import get_cfg
 from detectron2.utils.video_visualizer import VideoVisualizer
 from detectron2.utils.visualizer import Visualizer
 from detectron2.data import MetadataCatalog
+import torch
 
 from realsense import RSCamera
 import pyrealsense2 as rs
@@ -77,9 +78,11 @@ while True:
             quad_pose_serial = socket.recv()
             quad_pose = detection_msg_pb2.Detection()
             quad_pose.ParseFromString(quad_pose_serial)
-            print(quad_pose)
+            # print(quad_pose)
 
         frame, depth_frame = receiver.recv_frames()
+        # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        frame = torch.from_numpy(frame)
         cam_intrinsics = cam.intrinsics
         
         # depth_colormap = cam.colorize_frame(depth_frame)
@@ -88,6 +91,7 @@ while True:
         # depth_frame = np.asanyarray(depth_frame.get_data())
 
         # output_depth.write(depth_colormap)
+        # output_depth.write(depth_frame)
         # output_raw.write(frame)
 
         frame, depth_frame = receiver.recv_frames()
@@ -101,7 +105,8 @@ while True:
         # v = Visualizer(frame[:, :, ::-1], metadata=metadata, scale=1.2)
         # out = v.draw_instance_predictions(outputs['instances'].to('cpu'))
         
-        vis_frame = np.asarray(out.get_image()[:, :, ::-1])
+        # vis_frame = np.asarray(out.get_image()[:, :, ::-1])
+        vis_frame = np.asarray(out.get_image())
 
         mask_array = outputs['instances'].pred_masks.to('cpu').numpy()
         num_instances = mask_array.shape[0]
@@ -145,13 +150,13 @@ while True:
             mask_array_instance.append(mask_array[:, :, i:(i+1)])
             obj_mask = np.zeros_like(frame)
             obj_mask = np.where(mask_array_instance[i] == True, 255, obj_mask)
-            cv2.imwrite(f'pictures/mask_{class_name}.png',obj_mask)
+            # cv2.imwrite(f'pictures/mask_{class_name}.png',obj_mask)
 
             
             if class_name == TARGET_OBJECT:
                 if SEND_OUTPUT:
-                    print('Object location as detected -----')
-                    print(tvec)
+                    # print('Object location as detected -----')
+                    # print(tvec)
                     cam_2_drone_translation = [0.1267, 0, -0.0416]
                     cam_2_drone_orientation = [0, -30, 0]
 
@@ -170,12 +175,12 @@ while True:
                     
                     # Transform into drone frame
                     tvec = transform_frame_EulerXYZ(cam_2_drone_orientation, cam_2_drone_translation, tvec, degrees=True)
-                    print(f"Transform to drone frame: {tvec}")
+                    # print(f"Transform to drone frame: {tvec}")
                     # Transform into mocap frame
                     tvec = transform_frame_EulerXYZ(
                         rotation, translation, tvec, degrees=False)
-                    print(f'Transform to mocap frame: {tvec}')
-                    print(tvec)
+                    # print(f'Transform to mocap frame: {tvec}')
+                    # print(tvec)
                     
                     
 
@@ -183,8 +188,8 @@ while True:
 
                 
                 # Create point cloud of detected object
-                masked_frame = cv2.bitwise_and(frame, obj_mask)
-                cv2.imwrite('masked_frame.png', masked_frame)
+                # masked_frame = cv2.bitwise_and(frame, obj_mask)
+                # cv2.imwrite('masked_frame.png', masked_frame)
                 # grasp.set_point_cloud_from_aligned_masked_frames(masked_frame, depth_frame, cam_intrinsics)
                 # # grasp.set_point_cloud_from_aligned_frames(frame, depth_frame, cam_intrinsics)
                 # grasp.save_pcd(f'pcd/pointcloud_{TARGET_OBJECT}_{utils.RECORD_COUNTER}.pcd')
