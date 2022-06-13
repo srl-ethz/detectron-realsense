@@ -24,7 +24,7 @@ class GraspCandidate:
         pcd.transform([[-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
         
         # Save full PCD for illustration purposes
-        self.save_pcd('color_full_pcd.pcd')
+        self.save_pcd('pcd/graphics/color_full_pcd.pcd')
         
         pcd = pcd.voxel_down_sample(0.03)
         self.pointcloud.points = pcd.points
@@ -42,7 +42,7 @@ class GraspCandidate:
 
 
         # Save full PCD for illustration purposes
-        self.save_pcd('color_full_pcd.pcd')
+        self.save_pcd('pcd/graphics/color_full_pcd.pcd')
         
         # ROI selection
 
@@ -59,7 +59,7 @@ class GraspCandidate:
         pcd.colors = o3d.utility.Vector3dVector(res_colors)
 
         # Save masked PCD for illustration purposes
-        self.save_pcd('color_masked_pcd.pcd')
+        self.save_pcd('pcd/graphics/color_masked_pcd.pcd')
         # Downsampling to reduce computation time later on
         pcd = pcd.voxel_down_sample(0.01)
 
@@ -201,7 +201,7 @@ class GraspCandidate:
         self.pointcloud.colors = o3d.utility.Vector3dVector(colors)
         
         # Save full PCD for illustration purposes
-        self.save_pcd('grasp_candidates_highlighted_pcd.pcd')
+        self.save_pcd('pcd/graphics/grasp_candidates_highlighted_pcd.pcd')
         
         # self.visualize_geometries([self.pointcloud,])
         return grasp_idxs
@@ -310,6 +310,7 @@ if __name__=='__main__':
     grasp = GraspCandidate('pcd/pointcloud_bottle_65.pcd')
     grasp.find_all_grasping_candidates()
     grasp.find_grasping_points()
+    grasp.save_pcd('pcd/graphics/final_pcd_output.pcd')
     grasp.visualize_geometries([grasp.pointcloud, grasp.grasp_pcd])
     # grasp.visualize_geometries([grasp.grasp_pcd,])
     # grasp.visualise_pcd()
