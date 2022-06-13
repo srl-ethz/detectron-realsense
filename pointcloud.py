@@ -22,7 +22,9 @@ class GraspCandidate:
         intrinsics = o3d.camera.PinholeCameraIntrinsic(cam_intrinsics.width, cam_intrinsics.height, cam_intrinsics.fx, cam_intrinsics.fy, cam_intrinsics.ppx, cam_intrinsics.ppy)
         pcd = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd, intrinsics)
         pcd.transform([[-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
-
+        
+        # Save full PCD for illustration purposes
+        self.save_pcd('color_full_pcd.pcd')
         
         pcd = pcd.voxel_down_sample(0.03)
         self.pointcloud.points = pcd.points
@@ -39,6 +41,8 @@ class GraspCandidate:
         pcd.transform([[-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
 
 
+        # Save full PCD for illustration purposes
+        self.save_pcd('color_full_pcd.pcd')
         
         # ROI selection
 
@@ -54,6 +58,8 @@ class GraspCandidate:
         pcd.points = o3d.utility.Vector3dVector(res_points)
         pcd.colors = o3d.utility.Vector3dVector(res_colors)
 
+        # Save masked PCD for illustration purposes
+        self.save_pcd('color_masked_pcd.pcd')
         # Downsampling to reduce computation time later on
         pcd = pcd.voxel_down_sample(0.01)
 
@@ -140,6 +146,7 @@ class GraspCandidate:
         unit_vec_plane_2 = np.zeros(3)
         unit_vec_plane_1[idx_1] = 1
         unit_vec_plane_2[idx_2] = 1
+
         
         # Now, apply the transformation to transform the vector to the bounding box rotation
         # This gives the vector that defines the direction of the axis of the object
@@ -149,27 +156,51 @@ class GraspCandidate:
 
         # Use for visualisation          
         # axis_points = [np.add(center, np.dot(main_axis, 0.1*k)) for k in range(8)]
+        # axis_points_1 = [np.add(center, np.dot(axis_plane_1, 0.1*k)) for k in range(8)]
+        # axis_points_2 = [np.add(center, np.dot(axis_plane_2, 0.1*k)) for k in range(8)]
+        # self.add_points_and_color_to_pcd(axis_points, (0,255,0))
+        # self.add_points_and_color_to_pcd(axis_points_1, (0,255,0))
+        # self.add_points_and_color_to_pcd(axis_points_2, (0,255,0))
+
         self.main_axis = main_axis
-        return main_axis, axis_plane_1, axis_plane_2
+
+        return [[main_axis, extents[max_idx]], [axis_plane_1, extents[idx_1]], [axis_plane_2, extents[idx_2]]]
 
 
     def find_all_grasping_candidates(self):
-        main_axis, axis_plane_1, axis_plane_2 = self.find_largest_axis()
-        max_idx = np.argmax(self.bbox.extent)
-        if max_idx == 0:
-            max_idx = 1
-        elif max_idx == 1:
-            max_idx = 0
+        axis_and_extents = self.find_largest_axis()
+        main = axis_and_extents[0]
+        secondary = axis_and_extents[1]
+        third = axis_and_extents[2]
         
         centroid = self.find_centroid()
+        extents = np.asarray(self.bbox.extent).copy()
+        max_extent_idx = np.argmax(extents)
+        extents[max_extent_idx] = 0.025
+
+        bbox = o3d.geometry.OrientedBoundingBox(centroid, self.bbox.R, extents)
+
 
         points = np.asarray(self.pointcloud.points)
         colors = np.asarray(self.pointcloud.colors)
-        
-        rows = np.where(abs(points[:, max_idx] - centroid[max_idx]) < 0.008)
-        colors[rows] = (255,0,0)
+
+        grasp_idxs = bbox.get_point_indices_within_bounding_box(self.pointcloud.points)
+
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(points[grasp_idxs])
+        pcd.colors = o3d.utility.Vector3dVector(colors[grasp_idxs])
+
+
+
+        # rows = np.where(abs(points[:, max_idx] - centroid[max_idx]) < 0.008)
+        colors[grasp_idxs] = (255,0,0)
         self.pointcloud.colors = o3d.utility.Vector3dVector(colors)
-        return rows
+        
+        # Save full PCD for illustration purposes
+        self.save_pcd('grasp_candidates_highlighted_pcd.pcd')
+        
+        # self.visualize_geometries([self.pointcloud,])
+        return grasp_idxs
     
 
 
@@ -256,7 +287,7 @@ class GraspCandidate:
             pcd.colors = o3d.utility.Vector3dVector(colors)
             pcd.points = o3d.utility.Vector3dVector(points)
 
-            # New point cloud since visualization is flaky
+            # New point cloud since visualization is strange otherwise
             grasp_points = [points[max_idx], points[max_idx_partner]]
             print(grasp_points)
             grasp_colors = [[0,255,0] for _ in range(len(grasp_points))]
@@ -273,9 +304,10 @@ class GraspCandidate:
 
 if __name__=='__main__':
     grasp = GraspCandidate('pcd/pointcloud_bottle_65.pcd')
+    grasp.find_all_grasping_candidates()
     grasp.find_grasping_points()
-    # grasp.visualize_geometries([grasp.pointcloud, grasp.grasp_pcd])
-    grasp.visualize_geometries([grasp.grasp_pcd,])
+    grasp.visualize_geometries([grasp.pointcloud, grasp.grasp_pcd])
+    # grasp.visualize_geometries([grasp.grasp_pcd,])
     # grasp.visualise_pcd()
 
         
