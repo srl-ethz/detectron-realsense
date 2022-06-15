@@ -51,6 +51,7 @@ logger = Logger()
 records = np.empty((0, logger.cols))
 
 
+
 cfg = get_cfg()
 cfg.merge_from_file(model_zoo.get_config_file('COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml'))
 cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5
@@ -79,7 +80,7 @@ while True:
             quad_pose = detection_msg_pb2.Detection()
             quad_pose.ParseFromString(quad_pose_serial)
             # print(quad_pose)
-
+        serial_msg = None
         frame, depth_frame = receiver.recv_frames()
         # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         frame = torch.from_numpy(frame)
@@ -240,14 +241,20 @@ while True:
                     # Transform into mocap frame
                     tvec = transform_frame_EulerXYZ(
                         rotation, translation, tvec, degrees=False)
+
                     print(f'Transform to mocap frame: {tvec}')
                
                     
                 
                 
-                msg.x = tvec[0]
-                msg.y = tvec[1]
-                msg.z = tvec[2]
+                logger.record_value([np.array(
+                        [tvec[0], tvec[1], tvec[2], elapsed_time, 0, class_name]), ])
+                x_mean = np.mean(logger.records[:, 0])
+                y_mean = np.mean(logger.records[:, 1])
+                z_mean = np.mean(logger.records[:, 2])
+                msg.x = x_mean
+                msg.y = y_mean
+                msg.z = z_mean
                 msg.yaw = yaw
                 msg.label = class_name
                 msg.confidence = 0
@@ -255,8 +262,6 @@ while True:
 
                 # Log values
                 elapsed_time = time.time() - starting_time
-                logger.record_value([np.array(
-                        [tvec[0], tvec[1], tvec[2], elapsed_time, 0, class_name]), ])
                 
         if SHOW_WINDOW_VIS:
             cv2.imshow('output', vis_frame)
