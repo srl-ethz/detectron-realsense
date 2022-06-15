@@ -96,7 +96,7 @@ while True:
         # output_raw.write(frame)
 
         frame, depth_frame = receiver.recv_frames()
-
+     
         outputs = predictor(frame)
         detected_class_idxs = outputs['instances'].pred_classes
         pred_boxes = outputs['instances'].pred_boxes
@@ -156,10 +156,13 @@ while True:
 
             
             if class_name == TARGET_OBJECT:
+    
                 if SEND_OUTPUT and SIMPLE_LOC:
                     print('Object location (simple localization) -----')
                     print(tvec)
-                    cam_2_drone_translation = [0.1267, 0, -0.0416]
+                    # cam_2_drone_translation = [0.1267, 0, -0.0416]
+                    cam_2_drone_translation = [0.1267, -0.01, 0.0]
+
                     cam_2_drone_orientation = [0, -30, 0]
 
                     translation = [
@@ -200,6 +203,7 @@ while True:
                 grasp.save_pcd(f'pcd/pointcloud_{TARGET_OBJECT}_{utils.RECORD_COUNTER}.pcd')
                 centroid = grasp.find_centroid()
                 grasp_points = grasp.find_grasping_points()
+                print('found grasping points')
                 # # print(f'Grasp points: {grasp_points}')
                 # # print(f'Translation: {tvec}')
                 if grasp_points is not None:
@@ -221,7 +225,9 @@ while True:
                     print('Object Centroid (point cloud localization) -----')
                     print(tvec)
                     print(f'Simple localization: {easy_center}')
-                    cam_2_drone_translation = [0.1267, 0, -0.0416]
+                    # cam_2_drone_translation = [0.1267, 0, -0.0416]
+                    cam_2_drone_translation = [0.1267, -0.01, -0.025]
+
                     cam_2_drone_orientation = [0, -30, 0]
 
                     translation = [
@@ -249,15 +255,18 @@ while True:
                
                     
                 
-                
-                logger.record_value([np.array(
-                        [tvec[0], tvec[1], tvec[2], elapsed_time, 0, class_name]), ])
-                x_mean = np.mean(logger.records[:, 0])
-                y_mean = np.mean(logger.records[:, 1])
-                z_mean = np.mean(logger.records[:, 2])
-                msg.x = x_mean
-                msg.y = y_mean
-                msg.z = z_mean
+                if msg is not None and serial_msg is not None:
+                    logger.record_value([np.array(
+                            [tvec[0], tvec[1], tvec[2], elapsed_time, 0, class_name]), ])
+                # x_mean = np.mean(logger.records[:, 0].astype(float))
+                # y_mean = np.mean(logger.records[:, 1].astype(float))
+                # z_mean = np.mean(logger.records[:, 2].astype(float))
+                # msg.x = x_mean
+                # msg.y = y_mean
+                # msg.z = z_mean
+                msg.x = tvec[0]
+                msg.y = tvec[1]
+                msg.z = tvec[2]
                 msg.yaw = yaw
                 msg.label = class_name
                 msg.confidence = 0
