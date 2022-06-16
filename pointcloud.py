@@ -67,6 +67,23 @@ class GraspCandidate:
         self.pointcloud.points = pcd.points
         self.pointcloud.colors = pcd.colors
 
+        # Remove radius outliers
+        self.pointcloud, idxs = self.pointcloud.remove_radius_outlier(nb_points=16, radius=0.05)
+
+        self.display_inlier_outlier(self.pointcloud, idxs)
+
+
+    def display_inlier_outlier(cloud, ind):
+        inlier_cloud = cloud.select_by_index(ind)
+        outlier_cloud = cloud.select_by_index(ind, invert=True)
+
+        print("Showing outliers (red) and inliers (gray): ")
+        outlier_cloud.paint_uniform_color([1, 0, 0])
+        inlier_cloud.paint_uniform_color([0.8, 0.8, 0.8])
+        o3d.visualization.draw_geometries([inlier_cloud, outlier_cloud])
+
+
+
     def save_pcd(self, file):
         o3d.io.write_point_cloud(file, self.pointcloud)
 
