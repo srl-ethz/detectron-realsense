@@ -258,6 +258,7 @@ while True:
                 if msg is not None and serial_msg is not None:
                     logger.record_value([np.array(
                             [tvec[0], tvec[1], tvec[2], elapsed_time, 0, class_name]), ])
+                    print(f'logged {tvec}')
                 # x_mean = np.mean(logger.records[:, 0].astype(float))
                 # y_mean = np.mean(logger.records[:, 1].astype(float))
                 # z_mean = np.mean(logger.records[:, 2].astype(float))
