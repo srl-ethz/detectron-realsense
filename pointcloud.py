@@ -24,11 +24,11 @@ class GraspCandidate:
         pcd.transform([[-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
         
         # Save full PCD for illustration purposes
-        self.save_pcd('pcd/graphics/color_full_pcd.pcd')
         
         pcd = pcd.voxel_down_sample(0.03)
         self.pointcloud.points = pcd.points
         self.pointcloud.colors = pcd.colors
+        self.save_pcd('pcd/graphics/color_full_pcd.pcd')
 
     def set_point_cloud_from_aligned_masked_frames(self, frame, depth_frame, cam_intrinsics):
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -42,8 +42,8 @@ class GraspCandidate:
 
 
         # Save full PCD for illustration purposes
-        self.save_pcd('pcd/graphics/color_full_pcd.pcd')
-        
+        # self.save_pcd('pcd/graphics/color_full_pcd.pcd')
+        o3d.io.write_point_cloud('pcd/graphics/color_masked_full_pcd.pcd', pcd)
         # ROI selection
 
         # Get points and colors
@@ -60,6 +60,8 @@ class GraspCandidate:
 
         # Save masked PCD for illustration purposes
         self.save_pcd('pcd/graphics/color_masked_pcd.pcd')
+        o3d.io.write_point_cloud('pcd/graphics/color_masked_pcd.pcd', pcd)
+
         # Downsampling to reduce computation time later on
         pcd = pcd.voxel_down_sample(0.01)
 
@@ -324,12 +326,15 @@ class GraspCandidate:
 
 
 if __name__=='__main__':
-    grasp = GraspCandidate('pcd/pointcloud_bottle_65.pcd')
-    grasp.find_all_grasping_candidates()
-    grasp.find_grasping_points()
-    grasp.save_pcd('pcd/graphics/final_pcd_output.pcd')
-    grasp.visualize_geometries([grasp.pointcloud, grasp.grasp_pcd])
+    # grasp = GraspCandidate('pcd/pointcloud_bottle_91.pcd')
+    grasp = GraspCandidate('pcd/pointcloud_bottle_139.pcd')
+    cen = grasp.find_centroid()
+    grasp.add_points_and_color_to_pcd([cen,], (255,0,0))
+    # grasp.find_all_grasping_candidates()
+    # grasp.find_grasping_points()
+    # grasp.save_pcd('pcd/graphics/final_pcd_output.pcd')
+    # grasp.visualize_geometries([grasp.pointcloud, grasp.grasp_pcd])
     # grasp.visualize_geometries([grasp.grasp_pcd,])
-    # grasp.visualise_pcd()
+    grasp.visualise_pcd()
 
         
