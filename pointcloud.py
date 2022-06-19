@@ -72,7 +72,7 @@ class GraspCandidate:
         # Remove radius outliers
         self.pointcloud, idxs = self.pointcloud.remove_radius_outlier(nb_points=16, radius=0.05)
 
-        self.display_inlier_outlier(self.pointcloud, idxs)
+        # self.display_inlier_outlier(self.pointcloud, idxs)
 
 
     def display_inlier_outlier(cloud, ind):
