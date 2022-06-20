@@ -44,22 +44,22 @@ class VideoSender:
         t2.join()
         jpg_color = self.ret_dict['color']
         jpg_depth = self.ret_dict['depth']
+        # threaded_time = time.time() - start
+        # print(f'threaded finished after {(threaded_time) * 1000}')
 
-        print(f'threaded finished after {(threaded_time := time.time() - start) * 1000}')
-
-        start = time.time()
-        ret, frame_depth = cv2.imencode(
-            '.png', depth, [int(cv2.IMWRITE_PNG_COMPRESSION), 2])
-        # jpg_depth = frame_depth if ret else None
+        # start = time.time()
+        # ret, frame_depth = cv2.imencode(
+        #     '.png', depth, [int(cv2.IMWRITE_PNG_COMPRESSION), 2])
+        # # jpg_depth = frame_depth if ret else None
    
 
-        ret, jpg_frame = cv2.imencode(
-            '.jpg', color, [int(cv2.IMWRITE_JPEG_QUALITY), self.jpeg_quality])
-        # jpg_color = jpg_frame if ret else None
+        # ret, jpg_frame = cv2.imencode(
+        #     '.jpg', color, [int(cv2.IMWRITE_JPEG_QUALITY), self.jpeg_quality])
+        # # jpg_color = jpg_frame if ret else None
+        # non_threaded_time = time.time() - start
+        # print(f'non-threaded finished after {(non_threaded_time) * 1000}')
 
-        print(f'non-threaded finished after {(non_threaded_time := time.time() - start) * 1000}')
-
-        print(f'Ratio: {truncate(threaded_time/non_threaded_time, 3)}')
+        # print(f'Ratio: {truncate(threaded_time/non_threaded_time, 3)}')
 
         self.sender_color.send_jpg(self.hostname, jpg_color)
         self.sender_depth.send_jpg(self.hostname + '_depth', jpg_depth)
