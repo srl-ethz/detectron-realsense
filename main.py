@@ -32,6 +32,7 @@ SIMPLE_LOC = False
 SEND_RAW = False
 SEND_MEAN = False
 SEND_ROLLING_AVG = True
+RECORD_PCD_DATA = True
 
 TARGET_OBJECT = 'bottle'
 
@@ -199,11 +200,18 @@ while True:
                 # Create point cloud of detected object
                 masked_frame = cv2.bitwise_and(frame, obj_mask)
                 cv2.imwrite('masked_frame.png', masked_frame)
-                grasp_color = GraspCandidate()
-                grasp_color.set_point_cloud_from_aligned_frames(frame, depth_frame, cam_intrinsics)
-                grasp_color.save_pcd('pcd/graphics/color_pcd_full.pcd')
+                if RECORD_PCD_DATA:
+                    grasp_color = GraspCandidate()
+                    grasp_color.set_point_cloud_from_aligned_frames(frame, depth_frame, cam_intrinsics)
+                    grasp_color.save_pcd(f'pcd/pcd_logs/{utils.RECORD_COUNTER}_{TARGET_OBJECT}_{frame_counter}.pcd')
+                    print(f'Recorded pcd for frame {frame_counter}, sleeping briefly')
+                    time.sleep(3)
+                
+                
+                
+                
+                
                 grasp.set_point_cloud_from_aligned_masked_frames(masked_frame, depth_frame, cam_intrinsics)
-            
                 grasp.save_pcd(f'pcd/pointcloud_{TARGET_OBJECT}_{utils.RECORD_COUNTER}.pcd')
                 centroid = grasp.find_centroid()
                 grasp_points = grasp.find_grasping_points()
@@ -261,7 +269,7 @@ while True:
                 
                 if msg is not None and serial_msg is not None:
                     logger.record_value([np.array(
-                            [tvec[0], tvec[1], tvec[2], elapsed_time, 0, class_name]), ])
+                            [tvec[0], tvec[1], tvec[2], elapsed_time, 0, class_name, quad_pose.x, quad_pose.y, quad_pose.z, quad_pose.roll, quad_pose.pitch, quad_pose.yaw]), ])
                     print(f'logged {tvec}')
 
                 if SEND_MEAN:
