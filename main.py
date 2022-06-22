@@ -29,6 +29,10 @@ from streamer_receiver import VideoReceiver
 SHOW_WINDOW_VIS = True
 SEND_OUTPUT = True
 SIMPLE_LOC = False
+SEND_RAW = False
+SEND_MEAN = False
+SEND_ROLLING_AVG = True
+
 TARGET_OBJECT = 'bottle'
 
 cam = utils.RSCameraMockup()
@@ -259,21 +263,42 @@ while True:
                     logger.record_value([np.array(
                             [tvec[0], tvec[1], tvec[2], elapsed_time, 0, class_name]), ])
                     print(f'logged {tvec}')
-                # x_mean = np.mean(logger.records[:, 0].astype(float))
-                # y_mean = np.mean(logger.records[:, 1].astype(float))
-                # z_mean = np.mean(logger.records[:, 2].astype(float))
-                # msg.x = x_mean
-                # msg.y = y_mean
-                # msg.z = z_mean
-                msg.x = tvec[0]
-                msg.y = tvec[1]
-                msg.z = tvec[2]
+
+                if SEND_MEAN:
+                    x_mean = np.mean(logger.records[:, 0].astype(float))
+                    y_mean = np.mean(logger.records[:, 1].astype(float))
+                    z_mean = np.mean(logger.records[:, 2].astype(float))
+                    msg.x = x_mean
+                    msg.y = y_mean
+                    msg.z = z_mean
+                    
+
+                if SEND_ROLLING_AVG:
+                    length = len(logger.records[:,0].astype(float))
+                    num_records = 10 if length > 9 else length
+                    x_avg = np.avg(logger.records[-num_records:, 0].astype(float))
+                    y_avg = np.avg(logger.records[-num_records:, 1].astype(float))
+                    z_avg = np.avg(logger.records[-num_records:, 2].astype(float))
+                    msg.x = x_avg
+                    msg.y = y_avg
+                    msg.z = z_avg
+
+                if SEND_RAW:
+                    msg.x = tvec[0]
+                    msg.y = tvec[1]
+                    msg.z = tvec[2]
+                    pass
+
+
+
+
+
+
                 msg.yaw = yaw
                 msg.label = class_name
                 msg.confidence = 0
                 serial_msg = msg.SerializeToString()
-
-                # Log values
+                
                 elapsed_time = time.time() - starting_time
                 
         if SHOW_WINDOW_VIS:
@@ -304,8 +329,8 @@ while True:
         output_raw.release()
         output_grasp.release()
         cam.release()
+        socket.close()
         receiver.image_hub.close()
         cv2.destroyAllWindows()
-        socket.close()
         logger.export_to_csv(utils.LOG_FILE)
 
