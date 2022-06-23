@@ -3,7 +3,7 @@ import pandas as pd
 
 class Logger:
     def __init__(self) -> None:
-        # Store (x,y,z,t, confidence, class, drone_x, drone_y, drone_z, drone_roll, drone_pitch, drone_yaw) in here
+        # Store (global_x,global_y,global_z,t, confidence, class, drone_x, drone_y, drone_z, drone_roll, drone_pitch, drone_yaw) in here
         self.cols = 12
         self.records = np.empty((0,self.cols))
 
@@ -13,7 +13,7 @@ class Logger:
         self.records = np.concatenate((self.records, record))
     
     def export_to_csv(self, output_location):
-        cols = ['x', 'y', 'z', 't', 'confidence', 'class', 'drone_x', 'drone_y', 'drone_z', 'drone_roll', 'drone_pitch', 'drone_yaw']
+        cols = ['global_x', 'global_y', 'global_z', 't', 'confidence', 'class', 'drone_x', 'drone_y', 'drone_z', 'drone_roll', 'drone_pitch', 'drone_yaw']
         df = pd.DataFrame(data=self.records, columns=cols)
         df.to_csv(output_location)
 
