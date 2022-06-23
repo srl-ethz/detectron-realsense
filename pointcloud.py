@@ -327,9 +327,9 @@ class GraspCandidate:
 
 if __name__=='__main__':
     # grasp = GraspCandidate('pcd/pointcloud_bottle_91.pcd')
-    grasp = GraspCandidate('pcd/pointcloud_bottle_139.pcd')
-    cen = grasp.find_centroid()
-    grasp.add_points_and_color_to_pcd([cen,], (255,0,0))
+    grasp = GraspCandidate('pcd/pcd_logs/224_teddy bear_masked_15.pcd')
+    # cen = grasp.find_centroid()
+    # grasp.add_points_and_color_to_pcd([cen,], (255,0,0))
     # grasp.find_all_grasping_candidates()
     # grasp.find_grasping_points()
     # grasp.save_pcd('pcd/graphics/final_pcd_output.pcd')

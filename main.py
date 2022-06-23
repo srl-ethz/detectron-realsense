@@ -34,7 +34,7 @@ SEND_MEAN = False
 SEND_ROLLING_AVG = True
 RECORD_PCD_DATA = True
 
-TARGET_OBJECT = 'bottle'
+TARGET_OBJECT = 'teddy bear'
 
 cam = utils.RSCameraMockup()
 grasp = GraspCandidate()
@@ -164,7 +164,7 @@ while True:
     
                 if SEND_OUTPUT and SIMPLE_LOC:
                     print('Object location (simple localization) -----')
-                    print(tvec)
+                    print(tvec)        
                     # cam_2_drone_translation = [0.1267, 0, -0.0416]
                     cam_2_drone_translation = [0.1267, -0.01, 0.0]
 
@@ -202,8 +202,14 @@ while True:
                 cv2.imwrite('masked_frame.png', masked_frame)
                 if RECORD_PCD_DATA:
                     grasp_color = GraspCandidate()
+                    grasp_masked = GraspCandidate()
+                    
+                    grasp_masked.set_point_cloud_from_aligned_masked_frames(masked_frame, depth_frame, cam_intrinsics)
                     grasp_color.set_point_cloud_from_aligned_frames(frame, depth_frame, cam_intrinsics)
-                    grasp_color.save_pcd(f'pcd/pcd_logs/{utils.RECORD_COUNTER}_{TARGET_OBJECT}_{frame_counter}.pcd')
+                    
+                    grasp_masked.save_pcd(f'pcd/pcd_logs/{utils.RECORD_COUNTER}_{TARGET_OBJECT}_masked_{frame_counter}.pcd')
+                    grasp_color.save_pcd(f'pcd/pcd_logs/{utils.RECORD_COUNTER}_{TARGET_OBJECT}_full_{frame_counter}.pcd')
+                    
                     print(f'Recorded pcd for frame {frame_counter}, sleeping briefly')
                     time.sleep(3)
                 
@@ -272,7 +278,8 @@ while True:
                             [tvec[0], tvec[1], tvec[2], elapsed_time, 0, class_name, quad_pose.x, quad_pose.y, quad_pose.z, quad_pose.roll, quad_pose.pitch, quad_pose.yaw]), ])
                     print(f'logged {tvec}')
 
-                if SEND_MEAN:
+                length = len(logger.records[:,0].astype(float))
+                if SEND_MEAN and length > 9:
                     x_mean = np.mean(logger.records[:, 0].astype(float))
                     y_mean = np.mean(logger.records[:, 1].astype(float))
                     z_mean = np.mean(logger.records[:, 2].astype(float))
@@ -281,17 +288,16 @@ while True:
                     msg.z = z_mean
                     
 
-                if SEND_ROLLING_AVG:
-                    length = len(logger.records[:,0].astype(float))
+                if SEND_ROLLING_AVG and length > 9:
                     num_records = 10 if length > 9 else length
-                    x_avg = np.avg(logger.records[-num_records:, 0].astype(float))
-                    y_avg = np.avg(logger.records[-num_records:, 1].astype(float))
-                    z_avg = np.avg(logger.records[-num_records:, 2].astype(float))
+                    x_avg = np.average(logger.records[-num_records:, 0].astype(float))
+                    y_avg = np.average(logger.records[-num_records:, 1].astype(float))
+                    z_avg = np.average(logger.records[-num_records:, 2].astype(float))
                     msg.x = x_avg
                     msg.y = y_avg
                     msg.z = z_avg
 
-                if SEND_RAW:
+                if SEND_RAW or length < 10:
                     msg.x = tvec[0]
                     msg.y = tvec[1]
                     msg.z = tvec[2]
@@ -331,7 +337,7 @@ while True:
         frame_counter += 1
 
 
-    except KeyboardInterrupt as e:
+    except Exception as e:
         output.release()
         output_depth.release()
         output_raw.release()
@@ -341,4 +347,5 @@ while True:
         receiver.image_hub.close()
         cv2.destroyAllWindows()
         logger.export_to_csv(utils.LOG_FILE)
+        break
 
