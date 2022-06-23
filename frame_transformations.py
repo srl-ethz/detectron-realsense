@@ -12,7 +12,21 @@ def transform_frame_EulerXYZ(euler_angles, translation, point, degrees=True):
     point is the point in frame A that we want to convert to frame B.
     If degrees is set to true, the angles will be passed in as degrees
     '''
+
+    R = get_rotation_matrix_EulerXYZ(euler_angles, degrees)
+
+    # Total transformation matrix which includes the transformation matrix and the translation in homogenous coordinates
+    T = np.eye(4, 4)
+    T[:3, :3] = R
+    T[:3, 3] = translation
+
     
+    
+    # Apply transformation on target point we want to transform into different coordinate system
+    return np.dot(T, point)
+
+
+def get_rotation_matrix_EulerXYZ(euler_angles, degrees=True):
     if degrees:
         alpha = euler_angles[0] * pi / 180
         beta = euler_angles[1] * pi / 180
@@ -40,13 +54,4 @@ def transform_frame_EulerXYZ(euler_angles, translation, point, degrees=True):
     # Multiplications such that the total rotation matrix R is R = rz * ry * rx
     R1 = np.matmul(ry, rx)
     R = np.matmul(rz, R1)
-
-    # Total transformation matrix which includes the transformation matrix and the translation in homogenous coordinates
-    T = np.eye(4, 4)
-    T[:3, :3] = R
-    T[:3, 3] = translation
-
-    
-    
-    # Apply transformation on target point we want to transform into different coordinate system
-    return np.dot(T, point)
+    return R
