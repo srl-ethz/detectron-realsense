@@ -66,7 +66,7 @@ class VideoSender:
     
 
 if __name__=='__main__':
-    sender = VideoSender('tcp://10.39.60.6:5555')
+    sender = VideoSender('tcp://10.10.10.122:5555')
     cam = RSCamera()
     while True:
         color, depth = cam.get_raw_color_aligned_frames()
