@@ -32,7 +32,7 @@ SIMPLE_LOC = False
 SEND_RAW = False
 SEND_MEAN = False
 SEND_ROLLING_AVG = True
-RECORD_PCD_DATA = True
+RECORD_PCD_DATA = False
 
 TARGET_OBJECT = 'teddy bear'
 
@@ -74,6 +74,7 @@ if SEND_OUTPUT:
 
 starting_time = time.time()
 frame_counter = 0
+success_frame_counter = 0
 elapsed_time = 0
 serial_msg = None
 quad_pose = None
@@ -273,10 +274,11 @@ while True:
                
                     
                 
-                if msg is not None and serial_msg is not None:
-                    logger.record_value([np.array(
-                            [tvec[0], tvec[1], tvec[2], elapsed_time, 0, class_name, quad_pose.x, quad_pose.y, quad_pose.z, quad_pose.roll, quad_pose.pitch, quad_pose.yaw]), ])
-                    print(f'logged {tvec}')
+                
+                logger.record_value([np.array(
+                        [tvec[0], tvec[1], tvec[2], elapsed_time, 0, class_name, quad_pose.x, quad_pose.y, quad_pose.z, quad_pose.roll, quad_pose.pitch, quad_pose.yaw]), ])
+                print(f'logged {tvec}')
+                success_frame_counter += 1
 
                 length = len(logger.records[:,0].astype(float))
                 if SEND_MEAN and length > 9:
@@ -337,7 +339,17 @@ while True:
         frame_counter += 1
 
 
-    except Exception as e:
+    except KeyboardInterrupt as e:
+        print('exception handler called')
+        msg = detection_msg_pb2.Detection()
+        msg.x = 0.0
+        msg.y = 0.0
+        msg.z = 0.0
+        msg.label = 'closing'
+        msg.confidence = 0.0
+        serial_msg = msg.SerializeToString()
+        socket.send(serial_msg)
+        
         output.release()
         output_depth.release()
         output_raw.release()
