@@ -43,6 +43,7 @@ class GraspCandidate:
 
         # Save full PCD for illustration purposes
         # self.save_pcd('pcd/graphics/color_full_pcd.pcd')
+        print('saving pcd at creation')
         o3d.io.write_point_cloud('pcd/graphics/color_masked_full_pcd.pcd', pcd)
         # ROI selection
 
@@ -327,7 +328,7 @@ class GraspCandidate:
 
 if __name__=='__main__':
     # grasp = GraspCandidate('pcd/pointcloud_bottle_91.pcd')
-    grasp = GraspCandidate('pcd/pcd_logs/224_teddy bear_masked_15.pcd')
+    grasp = GraspCandidate('pcd/graphics/color_masked_full_pcd.pcd')
     # cen = grasp.find_centroid()
     # grasp.add_points_and_color_to_pcd([cen,], (255,0,0))
     # grasp.find_all_grasping_candidates()
