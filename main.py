@@ -168,6 +168,7 @@ while True:
                     print(tvec)        
                     # cam_2_drone_translation = [0.1267, 0, -0.0416]
                     cam_2_drone_translation = [0.1267, -0.01, 0.0]
+                    # compensate yaw in y
                     tvec[1] += utils.y_compensator(tvec[0])
 
                     cam_2_drone_orientation = [0, -30, 0]
