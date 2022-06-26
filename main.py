@@ -89,7 +89,7 @@ while True:
         serial_msg = None
         frame, depth_frame = receiver.recv_frames()
         # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        frame = torch.from_numpy(frame)
+        # frame = torch.from_numpy(frame)
         cam_intrinsics = cam.intrinsics
         
         # depth_colormap = cam.colorize_frame(depth_frame)
@@ -99,7 +99,7 @@ while True:
 
         # output_depth.write(depth_colormap)
         # output_depth.write(depth_frame)
-        # output_raw.write(frame)
+        output_raw.write(frame)
 
         frame, depth_frame = receiver.recv_frames()
      
@@ -168,6 +168,7 @@ while True:
                     print(tvec)        
                     # cam_2_drone_translation = [0.1267, 0, -0.0416]
                     cam_2_drone_translation = [0.1267, -0.01, 0.0]
+                    tvec[1] += utils.y_compensator(tvec[0])
 
                     cam_2_drone_orientation = [0, -30, 0]
 
@@ -266,6 +267,7 @@ while True:
                     # Transform into drone frame
                     tvec = transform_frame_EulerXYZ(cam_2_drone_orientation, cam_2_drone_translation, tvec, degrees=True)
                     print(f"Transform to drone frame: {tvec}")
+                    tvec[1] += utils.y_compensator(tvec[0])
                     # Transform into mocap frame
                     tvec = transform_frame_EulerXYZ(
                         rotation, translation, tvec, degrees=False)

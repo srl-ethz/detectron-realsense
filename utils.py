@@ -1,5 +1,6 @@
 import math
 import pyrealsense2 as rs
+import numpy as np
 
 def get_record_counter(file):
         # Determine the record counter
@@ -21,6 +22,9 @@ def get_record_counter(file):
 def truncate(number, digits) -> float:
         stepper = 10.0 ** digits
         return math.trunc(stepper * number) / stepper
+
+def y_compensator(distance_value):
+    return 0.06364 * distance_value - 0.042
 
 
 RECORD_COUNTER = get_record_counter('counter')
@@ -54,3 +58,9 @@ class RSCameraMockup():
 
     def release(self):
         print('Release called')
+    
+    def colorize_frame(self, depth_frame):
+        depth_frame = rs.pyrealsense2.frame(depth_frame)
+        colorizer = rs.colorizer(color_scheme=0)
+        return np.asanyarray(
+            colorizer.colorize(depth_frame).get_data())
