@@ -2,6 +2,8 @@ import open3d as o3d
 import numpy as np
 import cv2
 import time
+import math
+from frame_transformations import get_transformation_matrix_about_arb_axis
 
 
 class GraspCandidate:
@@ -9,6 +11,9 @@ class GraspCandidate:
         self.pointcloud = o3d.geometry.PointCloud()
         if file is not None:
             self.pointcloud = o3d.io.read_point_cloud(file)
+            self.pointcloud, idxs = self.pointcloud.remove_radius_outlier(nb_points=16, radius=0.05)
+
+
         self.bbox = None
         self.main_axis = None
         self.grasp_pcd = None
@@ -179,10 +184,10 @@ class GraspCandidate:
         axis_plane_2 = np.dot(bbox.R, unit_vec_plane_2)
 
         # Use for visualisation          
-        # axis_points = [np.add(center, np.dot(main_axis, 0.1*k)) for k in range(8)]
+        axis_points = [np.add(center, np.dot(main_axis, 0.1*k)) for k in range(8)]
         # axis_points_1 = [np.add(center, np.dot(axis_plane_1, 0.1*k)) for k in range(8)]
         # axis_points_2 = [np.add(center, np.dot(axis_plane_2, 0.1*k)) for k in range(8)]
-        # self.add_points_and_color_to_pcd(axis_points, (0,255,0))
+        self.add_points_and_color_to_pcd(axis_points, (0,255,0))
         # self.add_points_and_color_to_pcd(axis_points_1, (0,255,0))
         # self.add_points_and_color_to_pcd(axis_points_2, (0,255,0))
 
@@ -191,6 +196,11 @@ class GraspCandidate:
         return [[main_axis, extents[max_idx]], [axis_plane_1, extents[idx_1]], [axis_plane_2, extents[idx_2]]]
 
 
+    def rotate_pcd_around_axis(self, pcd, centroid, angle, axis):
+        T = get_transformation_matrix_about_arb_axis(centroid, angle, axis)
+        pcd_copy = o3d.geometry.PointCloud(pcd)
+        return pcd_copy.transform(T)
+        
     def find_all_grasping_candidates(self):
         axis_and_extents = self.find_largest_axis()
         main = axis_and_extents[0]
@@ -328,14 +338,20 @@ class GraspCandidate:
 
 if __name__=='__main__':
     # grasp = GraspCandidate('pcd/pointcloud_bottle_91.pcd')
-    grasp = GraspCandidate('pcd/graphics/color_masked_full_pcd.pcd')
+    grasp = GraspCandidate('pcd/pointcloud_bottle_41.pcd')
+    axis_extent, _, _ = grasp.find_largest_axis()
+    axis = axis_extent[0]
+    cen = grasp.find_centroid()
+
+    pcd = grasp.rotate_pcd_around_axis(grasp.pointcloud, cen, math.pi, axis)
     # cen = grasp.find_centroid()
     # grasp.add_points_and_color_to_pcd([cen,], (255,0,0))
     # grasp.find_all_grasping_candidates()
     # grasp.find_grasping_points()
     # grasp.save_pcd('pcd/graphics/final_pcd_output.pcd')
     # grasp.visualize_geometries([grasp.pointcloud, grasp.grasp_pcd])
-    # grasp.visualize_geometries([grasp.grasp_pcd,])
-    grasp.visualise_pcd()
+    pcd.transform([[1, 0, 0, 1], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
+    grasp.visualize_geometries([grasp.pointcloud, pcd])
+    # grasp.visualise_pcd()
 
         
