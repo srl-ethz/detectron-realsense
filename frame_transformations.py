@@ -55,3 +55,49 @@ def get_rotation_matrix_EulerXYZ(euler_angles, degrees=True):
     R1 = np.matmul(ry, rx)
     R = np.matmul(rz, R1)
     return R
+
+def get_transformation_matrix_about_arb_axis(centroid, angle, axis):
+    t1 = np.array([[1, 0, 0, -centroid[0]],
+                   [0, 1, 0, -centroid[1]],
+                   [0, 0, 1, -centroid[2]],
+                   [0, 0, 0, 1]])
+
+    t1_inv = np.array([[1, 0, 0, centroid[0]],
+                   [0, 1, 0, centroid[1]],
+                   [0, 0, 1, centroid[2]],
+                   [0, 0, 0, 1]])
+    
+    axis = np.dot(1/np.linalg.norm(axis), axis)
+    a = axis[0]
+    b = axis[1]
+    c = axis[2]
+    d = np.sqrt(b**2 + c**2)
+
+
+    rx = np.array([[1, 0, 0, 0],
+                   [0, c/d, -b/d, 0],
+                   [0, b/d, c/d, 0],
+                   [0, 0, 0, 1]])
+
+    rx_inv = np.array([[1, 0, 0, 0],
+                   [0, c/d, b/d, 0],
+                   [0, -b/d, c/d, 0],
+                   [0, 0, 0, 1]])
+
+    ry = np.array([[d, 0, -a, 0],
+                   [0, 1, 0, 0],
+                   [a, 0, d, 0],
+                   [0, 0, 0, 1]])
+    
+    ry_inv = np.array([[d, 0, a, 0],
+                   [0, 1, 0, 0],
+                   [-a, 0, d, 0],
+                   [0, 0, 0, 1]])
+
+    rz = np.array([[cos(angle), sin(angle), 0, 0],
+                   [-sin(angle), cos(angle), 0, 0],
+                   [0, 0, 1, 0],
+                   [0, 0, 0, 1]])
+
+    T = np.dot(t1_inv, np.dot(rx_inv, np.dot(ry_inv, np.dot(rz, np.dot(ry, np.dot(rx, t1))))))
+    return T
