@@ -247,7 +247,7 @@ while True:
                     print(tvec)
                     print(f'Simple localization: {easy_center}')
                     # cam_2_drone_translation = [0.1267, 0, -0.0416]
-                    cam_2_drone_translation = [0.1267, -0.01, -0.025]
+                    cam_2_drone_translation = [0.1267, -0.01, -0.09]
 
                     cam_2_drone_orientation = [0, -30, 0]
 
