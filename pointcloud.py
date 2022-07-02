@@ -338,20 +338,20 @@ class GraspCandidate:
 
 if __name__=='__main__':
     # grasp = GraspCandidate('pcd/pointcloud_bottle_91.pcd')
-    grasp = GraspCandidate('pcd/pointcloud_bottle_41.pcd')
+    grasp = GraspCandidate('pcd/pointcloud_teddy bear_315.pcd')
     axis_extent, _, _ = grasp.find_largest_axis()
     axis = axis_extent[0]
     cen = grasp.find_centroid()
 
-    pcd = grasp.rotate_pcd_around_axis(grasp.pointcloud, cen, math.pi, axis)
+    # pcd = grasp.rotate_pcd_around_axis(grasp.pointcloud, cen, math.pi, axis)
     # cen = grasp.find_centroid()
     # grasp.add_points_and_color_to_pcd([cen,], (255,0,0))
     # grasp.find_all_grasping_candidates()
     # grasp.find_grasping_points()
     # grasp.save_pcd('pcd/graphics/final_pcd_output.pcd')
     # grasp.visualize_geometries([grasp.pointcloud, grasp.grasp_pcd])
-    pcd.transform([[1, 0, 0, 1], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
-    grasp.visualize_geometries([grasp.pointcloud, pcd])
+    # pcd.transform([[1, 0, 0, 1], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
+    grasp.visualize_geometries([grasp.pointcloud])
     # grasp.visualise_pcd()
 
         

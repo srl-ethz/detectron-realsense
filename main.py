@@ -4,6 +4,7 @@ from pointcloud import GraspCandidate
 setup_logger()
 
 import numpy as np
+import math
 import cv2
 import time
 
@@ -219,12 +220,19 @@ while True:
                 
                 
                 
-                
-                grasp.set_point_cloud_from_aligned_masked_frames(masked_frame, depth_frame, cam_intrinsics)
-                grasp.save_pcd(f'pcd/pointcloud_{TARGET_OBJECT}_{utils.RECORD_COUNTER}.pcd')
-                centroid = grasp.find_centroid()
-                grasp_points = grasp.find_grasping_points()
-                print('found grasping points')
+                try:
+                    grasp.set_point_cloud_from_aligned_masked_frames(masked_frame, depth_frame, cam_intrinsics)
+                    centroid = grasp.find_centroid()
+                    axis_ext, _, _ = grasp.find_largest_axis()
+                    axis = axis_ext[0]
+                    pcd = grasp.rotate_pcd_around_axis(grasp.pointcloud, centroid, math.pi, axis)
+                    grasp.pointcloud += pcd
+                    grasp.save_pcd(f'pcd/pointcloud_{TARGET_OBJECT}_{utils.RECORD_COUNTER}.pcd')
+                    grasp_points = grasp.find_grasping_points()
+                    print('found grasping points')
+                except Exception as e:
+                    print('pcd data analysis went wrong')
+                    print(e)
                 # # print(f'Grasp points: {grasp_points}')
                 # # print(f'Translation: {tvec}')
                 if grasp_points is not None:
