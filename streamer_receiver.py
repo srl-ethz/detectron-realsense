@@ -3,6 +3,7 @@ import sys
 import numpy as np
 import cv2
 import imagezmq
+import time
 
 from realsense import RSCamera
 
@@ -21,14 +22,16 @@ class VideoReceiver:
         self.image_hub = imagezmq.ImageHub()
 
     def recv_frames(self):
+        start = time.time()
         color_header, color_jpg_buffer = self.image_hub.recv_jpg()
         color = cv2.imdecode(np.frombuffer(color_jpg_buffer, dtype='uint8'), -1)
+        print(f'image arrived with delay of {time.time() - int(color_header)}')
         self.image_hub.send_reply(b'OK')
         
         depth_header, depth_buffer = self.image_hub.recv_jpg()
         depth = cv2.imdecode(np.frombuffer(depth_buffer, dtype='uint8'), -1)
         self.image_hub.send_reply(b'OK')
-
+        print(f'receiving images took {(time.time() - start)*1000}')
         # cv2.imshow(color_header, color)
         # cv2.imshow(depth_header, depth)
         # cv2.waitKey(1)
