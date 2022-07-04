@@ -289,7 +289,7 @@ while True:
                     # Transform into drone frame
                     tvec = transform_frame_EulerXYZ(cam_2_drone_orientation, cam_2_drone_translation, tvec, degrees=True)
                     # print(f"Transform to drone frame: {tvec}")
-                    tvec[1] += utils.y_compensator(tvec[0])
+                    # tvec[1] += utils.y_compensator(tvec[0])
                     # Transform into mocap frame
                     tvec = transform_frame_EulerXYZ(
                         rotation, translation, tvec, degrees=False)
