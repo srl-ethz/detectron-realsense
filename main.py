@@ -35,7 +35,7 @@ SEND_MEAN = False
 SEND_ROLLING_AVG = True
 RECORD_PCD_DATA = False
 
-TARGET_OBJECT = 'teddy bear'
+TARGET_OBJECT = 'book'
 
 cam = utils.RSCameraMockup()
 grasp = GraspCandidate()
