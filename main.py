@@ -55,6 +55,8 @@ output_grasp = cv2.VideoWriter(utils.VIDEO_GRASP_FILE, cv2.VideoWriter_fourcc(
 
 logger = Logger()
 records = np.empty((0, logger.cols))
+time_logger = Logger()
+times = []
 
 
 
@@ -229,8 +231,7 @@ while True:
                     time.sleep(3)
                 
                 
-                
-                
+                grasp_points = None
                 try:
                     grasp.set_point_cloud_from_aligned_masked_frames(masked_frame, depth_frame, cam_intrinsics)
                     centroid = grasp.find_centroid()
@@ -366,7 +367,10 @@ while True:
                 serial_msg = msg.SerializeToString()
                 socket.send(serial_msg)
         
-        # print(f'ELAPSED TIME (ms): {elapsed_time * 1000}')
+
+        print(f'ELAPSED TIME (ms): {elapsed_time * 1000}')
+   
+        times.append(elapsed_time)
         if SHOW_WINDOW_VIS:
             output.write(vis_frame)
         frame_counter += 1
@@ -382,7 +386,11 @@ while True:
         msg.confidence = 0.0
         serial_msg = msg.SerializeToString()
         socket.send(serial_msg)
+
+        time_logger.records = np.asarray(times)
+        time_logger.export_single_col_csv(f'logs/main_times_{utils.RECORD_COUNTER}.csv')
         
+        receiver.close()
         output.release()
         output_depth.release()
         output_raw.release()

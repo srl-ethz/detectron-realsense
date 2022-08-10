@@ -162,12 +162,11 @@ class GraspCandidate:
         
         # Get index of maximum in array to determine longest axis and create a unit vector in the direction of the longest axis
         max_idx = np.argmax(extents)
-        unit_vec = np.zeros(3)
-        unit_vec[max_idx] = 1
+        main_unit_vec = np.zeros(3)
+        main_unit_vec[max_idx] = 1
 
 
-        # These are the other unit vectors perpendicular to the one above
-        # We will use these to create our grasping plane
+        # These are the indices for the other unit vectors perpendicular to the one above
         idx_1 = (max_idx + 1) % 3
         idx_2 = (max_idx + 2) % 3
         
@@ -177,9 +176,8 @@ class GraspCandidate:
         unit_vec_plane_2[idx_2] = 1
 
         
-        # Now, apply the transformation to transform the vector to the bounding box rotation
-        # This gives the vector that defines the direction of the axis of the object
-        main_axis = np.dot(bbox.R, unit_vec)
+        # Now, apply the transformation to rotate the base frame vectors to the bounding box frame
+        main_axis = np.dot(bbox.R, main_unit_vec)
         axis_plane_1 = np.dot(bbox.R, unit_vec_plane_1)
         axis_plane_2 = np.dot(bbox.R, unit_vec_plane_2)
 

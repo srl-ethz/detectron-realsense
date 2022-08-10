@@ -43,7 +43,7 @@ class VideoSender:
         t2.join()
         jpg_color = self.ret_dict['color']
         jpg_depth = self.ret_dict['depth']
-        # threaded_time = time.time() - start
+        threaded_time = time.time() - start
         # print(f'threaded finished after {(threaded_time) * 1000}')
 
         # start = time.time()
@@ -59,15 +59,18 @@ class VideoSender:
         # print(f'non-threaded finished after {(non_threaded_time) * 1000}')
 
         # print(f'Ratio: {truncate(threaded_time/non_threaded_time, 3)}')
-
+        start = time.time()
         self.sender_color.send_jpg(self.hostname, jpg_color)
-        self.sender_depth.send_jpg(self.hostname + '_depth', jpg_depth)
+        self.sender_depth.send_jpg(start, jpg_depth)
     
 
 if __name__=='__main__':
-    sender = VideoSender('tcp://10.10.10.122:5555')
+    sender = VideoSender('tcp://10.31.62.7:5555')
     cam = RSCamera()
     while True:
+        start = time.time()
         color, depth = cam.get_raw_color_aligned_frames()
         sender.send_frames(color, depth)
-        print('sent frames')
+        end = time.time() - start
+        print(f'total loop took: (ms) {end}')
+        # print('sent frames')

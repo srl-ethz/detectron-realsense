@@ -18,4 +18,10 @@ class Logger:
         df = pd.DataFrame(data=self.records, columns=cols)
         df.to_csv(output_location)
 
+
+    def export_single_col_csv(self, output_location):
+        print('exporting to csv')
+        cols = ['delay']
+        df = pd.DataFrame(data=self.records, columns=cols)
+        df.to_csv(output_location)
     
