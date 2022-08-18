@@ -20,13 +20,15 @@ def transform_frame_EulerXYZ(euler_angles, translation, point, degrees=True):
     T[:3, :3] = R
     T[:3, 3] = translation
 
-    
-    
     # Apply transformation on target point we want to transform into different coordinate system
     return np.dot(T, point)
 
 
 def get_rotation_matrix_EulerXYZ(euler_angles, degrees=True):
+    '''
+    Get the rotation matrix from a set of Euler angles.
+    '''
+
     if degrees:
         alpha = euler_angles[0] * pi / 180
         beta = euler_angles[1] * pi / 180
@@ -57,6 +59,16 @@ def get_rotation_matrix_EulerXYZ(euler_angles, degrees=True):
     return R
 
 def get_transformation_matrix_about_arb_axis(centroid, angle, axis):
+    '''
+    This gets the transformation matrix to rotate a point around an arbitrary axis in space
+    by a given amount. For this, we need a centroid of the frame we are rotating about (usually the object centroid)
+    and the axis of the rotation in the frame that we are rotating in. 
+
+    This is a bit longer sequence of operations that has a great explanation here: 
+    https://www.eng.uc.edu/~beaucag/Classes/Properties/OptionalProjects/CoordinateTransformationCode/Rotate%20about%20an%20arbitrary%20axis%20(3%20dimensions).html
+    '''
+    
+    
     t1 = np.array([[1, 0, 0, -centroid[0]],
                    [0, 1, 0, -centroid[1]],
                    [0, 0, 1, -centroid[2]],

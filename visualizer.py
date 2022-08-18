@@ -4,6 +4,11 @@ import matplotlib.pyplot as plt
 
 
 class DataAnalyzer:
+    '''
+    This class serves as data analysis tool, mainly for logs that have been recorded in an external partner application.
+    It can be used to create different graphs and visualizations of the collected data.
+    '''
+    
     def __init__(self, input_locations, dims):
         self.x_lim = dims[0]
         self.y_lim = dims[1]
@@ -12,14 +17,15 @@ class DataAnalyzer:
             df = pd.read_csv(file)
             self.df = pd.concat([self.df, df])
 
-        # self.df = pd.read_csv(input_location)
-        # self.df = self.df.drop(self.df[(self.df.mocap_x == 0) | (self.df.vision_x == 0)].index)
+        # Drop points with no valid detections or no valid motion capture data
+        self.df = self.df.drop(self.df[(self.df.mocap_x == 0) | (self.df.vision_x == 0)].index)
         self.avg_fps = 0
         self.avg_position = (0, 0)
 
     def export_to_csv(self, output_location):
         self.df.to_csv(output_location)
 
+    # Add frames per second to dataframe
     def add_fps_to_df(self):
         timestamps = self.df['t'].to_numpy()
         fps = [0]
@@ -32,7 +38,7 @@ class DataAnalyzer:
 
         self.df.insert(len(self.df.columns), 'fps', fps)
 
-    
+    # Visualizes frames per second
     def visualize_fps_raw(self):
         if 'fps' not in self.df.columns:
             self.add_fps_to_df()
@@ -47,6 +53,7 @@ class DataAnalyzer:
         print(np.average(fps))
         plt.show()
 
+    # Visualizes a given axis with a scatterplot
     def visualize_axis_raw(self, axis):
         data = self.df[axis].to_numpy()
         timesteps = np.linspace(0, data.size - 1, data.size)
@@ -62,6 +69,7 @@ class DataAnalyzer:
         
         plt.show()
 
+    # Visualize x,y,z axis 
     def visualize_3d_pixels(self):
         x_vec = self.df['x'].to_numpy()
         y_vec = self.df['y'].to_numpy()
@@ -85,6 +93,7 @@ class DataAnalyzer:
 
         plt.show()
 
+    # Visualize x,y,z development
     def visualize_3d_meters(self):
         x_vec = self.df['x'].to_numpy()
         y_vec = self.df['y'].to_numpy()
@@ -111,6 +120,7 @@ class DataAnalyzer:
 
         plt.show()
 
+    # Visualize x,y development
     def visualize_2D_pixels(self):
         x_vec = self.df['x'].to_numpy()
         y_vec = self.df['y'].to_numpy()
@@ -131,7 +141,7 @@ class DataAnalyzer:
 
 
 
-
+# Get mean, standard deviation of axis and plot it in dataframe
 def analyse_axis(df, axis, plot=False):
     data = df[axis].to_numpy()
     data = data[3:100]
@@ -147,6 +157,8 @@ def analyse_axis(df, axis, plot=False):
     
     # plt.show()
 
+# Plot vector against another vector with labels
+# This function also adds the labels to the legend if applicable
 def plot_vector(vec, y_label, x_vec=None, x_label=None, color='blue', line=False):
     data = np.asarray(vec)
     timesteps = np.linspace(0, data.size - 1, data.size) if x_vec is None else x_vec
@@ -168,7 +180,7 @@ def plot_vector(vec, y_label, x_vec=None, x_label=None, color='blue', line=False
     plt.subplots_adjust(left=0.15)
     
 
-    
+# Analyze the error for a series of logs in 3D    
 def analyze_series_3d_error():
     vis = DataAnalyzer(
         [
