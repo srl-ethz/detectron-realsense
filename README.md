@@ -44,6 +44,6 @@ on the offboard computer. Make sure the IP address is set correctly in both prog
 
 ### Integration into other systems
 
-For integration into other systems, we provide one example for integration into a Fast DDS driven application. For integration, you only need to integrate ZeroMQ and Protobuf into your application and then you can connect this vision application with your target application. 
+For integration into other systems, we provide [one example](https://github.com/erikbr01/Protocol-Buffer-Examples) for integration into a Fast DDS driven application. For integration, you only need to integrate ZeroMQ and Protobuf into your application and then you can connect this vision application with your target application. 
 
 For questions, do not hesitate to reach out via a GitHub issue or per mail: [erbauer@ethz.ch](mailto:erbauer@ethz.ch)
