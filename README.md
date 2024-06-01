@@ -1,3 +1,8 @@
+# Archived!
+
+This project has been moved into the [RAPTOR codebase](https://github.com/raptor-ethz/raptor) as a ROS2 package.
+
+
 # detectron-realsense
 
 This repository contains code for segmenting RGB frames from an Intel RealSense series camera using detectron2 and building a masked point cloud of the detected object. Furthermore, it contains code for sending compressed RGB and depth frames from the RealSense camera over a local network using imagezmq. This allows the analysis of captured frames on any connected computer in the same local network. Connection to other processes is enabled using ZeroMQ sockets. 
